@@ -11,7 +11,7 @@ __all__ = [
 ]
 
 
-def __getattr__(name: str):
+def __getattr__(name: str):  # pragma: no cover
     """Lazy import to avoid circular dependencies."""
     if name in ("DEFAULT_CATALOG", "CatalogIndex", "fuzzy_search", "resolve"):
         from core.catalog import search

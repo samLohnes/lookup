@@ -4,7 +4,7 @@ from __future__ import annotations
 __all__ = ["predict_passes", "sample_track"]
 
 
-def __getattr__(name: str):
+def __getattr__(name: str):  # pragma: no cover
     """Lazy import to avoid circular dependencies."""
     if name == "predict_passes":
         from core.orbital.passes import predict_passes
