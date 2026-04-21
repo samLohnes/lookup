@@ -122,6 +122,13 @@ class HorizonMask:
 
     samples_deg: tuple[float, ...]
 
+    def __post_init__(self) -> None:
+        if len(self.samples_deg) != 360:
+            raise ValueError(
+                f"HorizonMask requires exactly 360 samples (one per degree of azimuth); "
+                f"got {len(self.samples_deg)}"
+            )
+
     def min_elevation_at(self, azimuth_deg: float) -> float:
         """Return the min-elevation threshold at the given azimuth."""
         i = int(round(azimuth_deg)) % len(self.samples_deg)
