@@ -121,3 +121,68 @@ def test_resolution_single_and_group():
     assert single.type == "single"
     assert group.type == "group"
     assert len(group.norad_ids) == 3
+
+
+# --- M2 additions below ---
+
+import numpy as np
+
+from core._types import DEM, TrainPass
+
+
+def test_train_pass_construction():
+    t0 = datetime(2026, 5, 1, 2, 0, 0, tzinfo=timezone.utc)
+    t1 = datetime(2026, 5, 1, 2, 2, 30, tzinfo=timezone.utc)
+    t2 = datetime(2026, 5, 1, 2, 5, 0, tzinfo=timezone.utc)
+
+    members = (
+        Pass(
+            id="44713-20260501020000",
+            norad_id=44713,
+            name="STARLINK-1",
+            rise=PassEndpoint(time=t0, position=AngularPosition(10.0, 10.0)),
+            peak=PassEndpoint(time=t1, position=AngularPosition(180.0, 60.0)),
+            set=PassEndpoint(time=t2, position=AngularPosition(350.0, 10.0)),
+            duration_s=300,
+            max_magnitude=4.0,
+            sunlit_fraction=1.0,
+            tle_epoch=t0,
+            terrain_blocked_ranges=(),
+        ),
+    )
+
+    tp = TrainPass(
+        id="starlink-train-20260501020000",
+        name="Starlink-L175 train",
+        member_norad_ids=(44713, 44714, 44715),
+        rise=PassEndpoint(time=t0, position=AngularPosition(10.0, 10.0)),
+        peak=PassEndpoint(time=t1, position=AngularPosition(180.0, 60.0)),
+        set=PassEndpoint(time=t2, position=AngularPosition(350.0, 10.0)),
+        duration_s=300,
+        max_magnitude=4.0,
+        member_passes=members,
+    )
+
+    assert tp.name == "Starlink-L175 train"
+    assert tp.member_norad_ids == (44713, 44714, 44715)
+    assert tp.peak.position.elevation_deg == 60.0
+    assert tp.member_passes == members
+
+
+def test_dem_construction_and_sampling():
+    # 3×3 synthetic grid at (0°, 0°) with 1 m spacing per sample.
+    elevations = np.array(
+        [[100.0, 110.0, 120.0],
+         [105.0, 115.0, 125.0],
+         [108.0, 118.0, 128.0]],
+        dtype=np.float32,
+    )
+    dem = DEM(
+        south_lat=0.0,
+        north_lat=1e-5,
+        west_lng=0.0,
+        east_lng=1e-5,
+        elevations=elevations,
+    )
+    assert dem.shape == (3, 3)
+    assert dem.elevations[1, 1] == 115.0
