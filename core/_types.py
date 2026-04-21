@@ -152,3 +152,54 @@ class Resolution:
     type: Literal["single", "group"]
     norad_ids: tuple[int, ...]
     display_name: str
+
+
+# ---------------------------------------------------------------------------
+# M2 additions
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class TrainPass:
+    """An aggregated pass event representing a co-flying batch of satellites.
+
+    Produced by `core.trains.clustering.group_into_trains` when multiple
+    individual passes have near-simultaneous rises and parallel ground
+    tracks (e.g. a freshly-launched Starlink train).
+
+    The rise/peak/set endpoints are the envelope of the member passes:
+    earliest rise, latest set, median-ish peak.
+    """
+
+    id: str
+    name: str
+    member_norad_ids: tuple[int, ...]
+    rise: "PassEndpoint"
+    peak: "PassEndpoint"
+    set: "PassEndpoint"
+    duration_s: int
+    max_magnitude: Optional[float]
+    member_passes: tuple["Pass", ...]
+
+
+@dataclass(frozen=True, slots=True)
+class DEM:
+    """A raster elevation tile covering a geographic bounding box.
+
+    Attributes:
+        south_lat, north_lat: WGS84 latitude bounds in degrees.
+        west_lng, east_lng: WGS84 longitude bounds in degrees.
+        elevations: 2-D float32 numpy array, shape (rows, cols). `elevations[0,0]`
+            is the north-west corner; rows increase southward, cols eastward.
+    """
+
+    south_lat: float
+    north_lat: float
+    west_lng: float
+    east_lng: float
+    elevations: "object"  # Typed loosely to avoid forcing numpy imports at type-check time.
+
+    @property
+    def shape(self) -> tuple[int, int]:
+        """(rows, cols) of the underlying array."""
+        return tuple(self.elevations.shape)  # type: ignore[attr-defined]
