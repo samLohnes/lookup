@@ -1,7 +1,11 @@
-"""Golden test — ISS passes over NYC, April 2024, frozen fixture TLE.
+"""Golden test — ISS passes over NYC, 24 h window from TLE epoch, frozen fixture TLE.
 
-Asserts the engine's output matches hand-verified expected values within
-the spec's accuracy tolerances (±1 s on time, ±0.1° on azimuth/elevation).
+Asserts the engine's output is stable (regression guard) within the spec's
+accuracy tolerances (±1 s on time, ±0.1° on azimuth/elevation).
+
+The fixture uses a real ISS TLE with realistic orbital elements. The expected
+values are engine-derived; this test catches regressions, not absolute accuracy.
+Cross-check against Heavens-Above before making accuracy claims.
 
 Any change to the engine that perturbs these values must be either a real
 accuracy improvement (update the fixture) or a regression (fix the bug).
@@ -31,7 +35,7 @@ ANGLE_TOLERANCE_DEG = 0.1
 def test_iss_nyc_24h_matches_hand_verified(timescale):
     """Assert ISS passes over NYC match the frozen fixture within tolerance."""
     tle = parse_tle_file(FIXTURES / "tle" / "iss_25544.txt")
-    start = datetime(2024, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
+    start = tle.epoch.astimezone(timezone.utc)
     end = start + timedelta(hours=24)
 
     passes = predict_passes(tle, NYC, start, end, timescale=timescale)
