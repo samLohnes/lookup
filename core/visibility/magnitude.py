@@ -22,7 +22,7 @@ DEFAULT_INTRINSIC_MAGNITUDE = 4.0  # conservative dim default for unknown object
 def _phase_correction_deg(phase_angle_deg: float) -> float:
     """Lambertian-sphere phase correction, magnitudes.
 
-    At phase 0° → 0 mag penalty. At 90° → ~0.75. At 180° → diverges;
+    At phase 0° → 0 mag penalty. At 90° → ~1.24. At 180° → diverges;
     clamped in practice to ~7 mag.
     """
     phi = math.radians(min(max(phase_angle_deg, 0.0), 179.9))
