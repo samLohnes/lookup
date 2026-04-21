@@ -1,7 +1,7 @@
 """Shared pytest fixtures for the engine tests.
 
 Loads skyfield's timescale and DE421 planetary ephemeris once per session.
-DE421 is downloaded on first use to the local pytest cache dir.
+DE421 is cached at tests/fixtures/skyfield_cache/ so it's downloaded once, not once per run.
 """
 from __future__ import annotations
 
@@ -11,11 +11,14 @@ import pytest
 from skyfield.api import Loader
 
 
+_CACHE_DIR = Path(__file__).resolve().parent / "fixtures" / "skyfield_cache"
+
+
 @pytest.fixture(scope="session")
-def skyfield_loader(tmp_path_factory: pytest.TempPathFactory) -> Loader:
-    """A skyfield Loader that caches downloads in a pytest tmp dir."""
-    cache = tmp_path_factory.mktemp("skyfield-cache")
-    return Loader(str(cache))
+def skyfield_loader() -> Loader:
+    """A skyfield Loader that caches downloads under tests/fixtures/skyfield_cache."""
+    _CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    return Loader(str(_CACHE_DIR))
 
 
 @pytest.fixture(scope="session")
