@@ -8,7 +8,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from skyfield.api import Loader, load
+from skyfield.api import Loader
 
 
 @pytest.fixture(scope="session")

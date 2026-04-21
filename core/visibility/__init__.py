@@ -14,7 +14,7 @@ __all__ = [
 ]
 
 
-def __getattr__(name: str):
+def __getattr__(name: str):  # pragma: no cover
     """Lazy import to avoid circular dependencies."""
     if name == "ASTRONOMICAL_TWILIGHT_DEG":
         from core.visibility.darkness import ASTRONOMICAL_TWILIGHT_DEG

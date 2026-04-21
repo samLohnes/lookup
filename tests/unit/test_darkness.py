@@ -3,8 +3,6 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-import pytest
-
 from core._types import Observer
 from core.visibility.darkness import (
     ASTRONOMICAL_TWILIGHT_DEG,
