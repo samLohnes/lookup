@@ -2965,6 +2965,358 @@ git commit -m "feat(api): POST /passes endpoint"
 
 ---
 
+## Task 12a: Default group filters (auto-trim noisy group queries)
+
+**Why this exists:** Spec §11.1 requires that when a group query (e.g. `starlink`) would return hundreds or thousands of passes, the default response is filtered to "notable" passes only — brighter than magnitude +4 AND peak elevation above 30° — unless the caller opts into all passes. Without this, a `curl -d '{"query":"starlink"…}'` call would dump every pass of every Starlink in the window, which is unusable. This side-task closes that spec gap before M2 ships.
+
+**Interaction with Task 12:** This task extends Task 12's `/passes` route. Single-satellite queries are **never** auto-filtered. The filters apply only when `resolution.type == "group"` and the caller hasn't explicitly overridden via `apply_group_defaults=false`.
+
+**Files:**
+- Modify: `api/schemas/requests.py` (add two fields)
+- Modify: `api/routes/passes.py` (apply default filters when applicable)
+- Modify: `tests/api_unit/test_passes_route.py` (add coverage)
+
+- [ ] **Step 1: Extend `PassesRequest` with the two new fields**
+
+Overwrite `api/schemas/requests.py` with the full contents:
+
+```python
+"""Request-body Pydantic models for the API."""
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Literal
+
+from pydantic import BaseModel, Field
+
+
+class _ObserverFields(BaseModel):
+    lat: float = Field(..., ge=-90.0, le=90.0)
+    lng: float = Field(..., ge=-180.0, le=180.0)
+    elevation_m: float = 0.0
+
+
+class PassesRequest(_ObserverFields):
+    query: str = Field(..., min_length=1)
+    from_utc: datetime
+    to_utc: datetime
+    mode: Literal["line-of-sight", "naked-eye"] = "line-of-sight"
+    min_magnitude: float | None = None
+    min_peak_elevation_deg: float | None = Field(
+        default=None,
+        description=(
+            "Drop passes whose peak elevation is below this (degrees). "
+            "If None, no elevation floor is applied unless the caller is making "
+            "a group query and `apply_group_defaults` is true, in which case "
+            "the default 30° floor is used."
+        ),
+    )
+    apply_group_defaults: bool = Field(
+        default=True,
+        description=(
+            "When true (default) and the query resolves to a group, automatically "
+            "apply the default 'notable passes' filters: peak elevation ≥ 30° "
+            "and (in naked-eye mode) magnitude ≤ +4. Explicit `min_magnitude` "
+            "and `min_peak_elevation_deg` values always win over the defaults."
+        ),
+    )
+
+
+class SkyTrackRequest(_ObserverFields):
+    query: str = Field(..., min_length=1)
+    from_utc: datetime
+    to_utc: datetime
+    dt_seconds: int = Field(1, ge=1, le=3600)
+```
+
+- [ ] **Step 2: Apply the filters in `api/routes/passes.py`**
+
+Overwrite `api/routes/passes.py` with the full contents:
+
+```python
+"""POST /passes — predict visibility windows for a query + observer + window."""
+from __future__ import annotations
+
+from typing import Annotated, Union
+
+from fastapi import APIRouter, Depends, HTTPException
+from skyfield.api import Timescale
+from skyfield.jpllib import SpiceKernel
+
+from api.deps import get_ephemeris, get_terrain_fetcher, get_timescale, get_tle_fetcher
+from api.schemas.requests import PassesRequest
+from api.schemas.responses import (
+    PassesResponse,
+    PassResponse,
+    TrainPassResponse,
+    pass_to_response,
+    trainpass_to_response,
+)
+from core._types import Observer, Pass, TLE
+from core.catalog.fetcher import TLEFetcher
+from core.catalog.search import DEFAULT_CATALOG, resolve
+from core.orbital.passes import predict_passes
+from core.terrain.fetcher import TerrainFetcher
+from core.trains.clustering import group_into_trains
+from core.visibility.filter import filter_passes
+
+router = APIRouter()
+
+# Defaults applied to group queries when the caller hasn't overridden.
+# Spec §11.1 "apply default brightness/elevation filters for group queries".
+_GROUP_DEFAULT_MIN_MAGNITUDE = 4.0      # brighter than +4
+_GROUP_DEFAULT_MIN_PEAK_EL_DEG = 30.0   # peak at least 30° above horizon
+
+
+def _observer_from_request(req: PassesRequest) -> Observer:
+    return Observer(lat=req.lat, lng=req.lng, elevation_m=req.elevation_m)
+
+
+def _effective_filters(
+    req: PassesRequest,
+    is_group: bool,
+) -> tuple[float | None, float | None]:
+    """Resolve (min_magnitude, min_peak_elevation_deg) after applying group defaults.
+
+    Group defaults only kick in when:
+      * resolution is a group, AND
+      * req.apply_group_defaults is True, AND
+      * the specific value wasn't explicitly set by the caller.
+    For single-satellite queries, the caller's values pass through unchanged.
+    """
+    min_mag = req.min_magnitude
+    min_el = req.min_peak_elevation_deg
+    if is_group and req.apply_group_defaults:
+        if min_mag is None and req.mode == "naked-eye":
+            min_mag = _GROUP_DEFAULT_MIN_MAGNITUDE
+        if min_el is None:
+            min_el = _GROUP_DEFAULT_MIN_PEAK_EL_DEG
+    return min_mag, min_el
+
+
+@router.post("/passes", response_model=PassesResponse)
+def post_passes(
+    req: PassesRequest,
+    tle_fetcher: Annotated[TLEFetcher, Depends(get_tle_fetcher)],
+    terrain: Annotated[TerrainFetcher, Depends(get_terrain_fetcher)],
+    timescale: Annotated[Timescale, Depends(get_timescale)],
+    ephemeris: Annotated[SpiceKernel, Depends(get_ephemeris)],
+) -> PassesResponse:
+    try:
+        resolution = resolve(req.query, catalog=DEFAULT_CATALOG)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    is_group = resolution.type == "group"
+    effective_min_mag, effective_min_el = _effective_filters(req, is_group)
+
+    observer = _observer_from_request(req)
+    horizon = terrain.get_horizon_mask(observer)
+
+    tles: list[TLE] = []
+    ages: list[float] = []
+    if resolution.type == "single":
+        tle, age = tle_fetcher.get_tle(resolution.norad_ids[0])
+        tles.append(tle)
+        ages.append(age)
+    else:
+        group_tles, age = tle_fetcher.get_group_tles(resolution.display_name)
+        wanted = set(resolution.norad_ids)
+        tles.extend(t for t in group_tles if t.norad_id in wanted)
+        ages.append(age)
+
+    all_passes: list[Pass] = []
+    for tle in tles:
+        tle_passes = predict_passes(
+            tle, observer, req.from_utc, req.to_utc,
+            timescale=timescale,
+            horizon_mask=horizon,
+        )
+        filtered = filter_passes(
+            tle_passes, tle, observer,
+            mode=req.mode,
+            timescale=timescale,
+            ephemeris=ephemeris,
+            min_magnitude=effective_min_mag,
+        )
+        all_passes.extend(filtered)
+
+    # Elevation floor applies regardless of mode (filter_passes only knows about
+    # magnitude). Applied after flattening so group defaults hit group results
+    # once, not per-satellite.
+    if effective_min_el is not None:
+        all_passes = [
+            p for p in all_passes
+            if p.peak.position.elevation_deg >= effective_min_el
+        ]
+
+    all_passes.sort(key=lambda p: p.rise.time)
+
+    grouped = group_into_trains(all_passes) if is_group else all_passes
+
+    items: list[Union[PassResponse, TrainPassResponse]] = []
+    for event in grouped:
+        if isinstance(event, Pass):
+            items.append(pass_to_response(event))
+        else:
+            items.append(trainpass_to_response(event))
+
+    return PassesResponse(
+        query=req.query,
+        resolved_name=resolution.display_name,
+        passes=items,
+        tle_age_seconds=ages[0] if ages else None,
+    )
+```
+
+- [ ] **Step 3: Add test coverage**
+
+Append to `tests/api_unit/test_passes_route.py`:
+
+```python
+# ---------------------------------------------------------------------------
+# Task 12a: default group filters
+# ---------------------------------------------------------------------------
+
+def _fake_tle_fetcher_group():
+    """Returns a fetcher whose get_group_tles yields a single ISS TLE.
+
+    Using a single TLE keeps the test deterministic while still exercising
+    the `resolution.type == "group"` code path.
+    """
+    from core.catalog.tle_parser import parse_tle_file
+
+    tle = parse_tle_file(TLE_PATH)
+    fake = MagicMock()
+    fake.get_tle.return_value = (tle, 120.0)
+    fake.get_group_tles.return_value = ([tle], 120.0)
+    return fake
+
+
+def _build_client_for_group() -> TestClient:
+    """Like _build_client but with get_group_tles mocked too."""
+    app = create_app(Settings(cache_root="/tmp/satvis-test"))
+    app.dependency_overrides[get_tle_fetcher] = _fake_tle_fetcher_group
+    app.dependency_overrides[get_terrain_fetcher] = _fake_terrain_fetcher
+    app.dependency_overrides[get_timescale] = lambda: load.timescale()
+    app.dependency_overrides[get_ephemeris] = lambda: load("de421.bsp")
+    return TestClient(app)
+
+
+def _passes_request_body(start, end, *, query: str, **overrides) -> dict:
+    body = {
+        "lat": 40.7128,
+        "lng": -74.0060,
+        "elevation_m": 10,
+        "query": query,
+        "from_utc": start.isoformat(),
+        "to_utc": end.isoformat(),
+        "mode": "line-of-sight",
+    }
+    body.update(overrides)
+    return body
+
+
+def test_group_query_applies_default_30deg_elevation_floor():
+    """stations group → only passes with peak elevation ≥ 30° remain."""
+    client = _build_client_for_group()
+    tle = parse_tle_file(TLE_PATH)
+    start = tle.epoch.astimezone(timezone.utc)
+    end = start + timedelta(hours=24)
+
+    response = client.post(
+        "/passes",
+        json=_passes_request_body(start, end, query="stations"),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    # Every returned pass (or train) must clear the 30° floor.
+    for event in body["passes"]:
+        assert event["peak"]["elevation_deg"] >= 30.0
+
+
+def test_group_query_with_apply_group_defaults_false_keeps_low_passes():
+    """Opting out of defaults → low-elevation passes included again."""
+    client = _build_client_for_group()
+    tle = parse_tle_file(TLE_PATH)
+    start = tle.epoch.astimezone(timezone.utc)
+    end = start + timedelta(hours=24)
+
+    default_on = client.post(
+        "/passes",
+        json=_passes_request_body(start, end, query="stations"),
+    ).json()
+    default_off = client.post(
+        "/passes",
+        json=_passes_request_body(
+            start, end, query="stations", apply_group_defaults=False,
+        ),
+    ).json()
+
+    # Opting out must never return fewer events than the filtered version.
+    assert len(default_off["passes"]) >= len(default_on["passes"])
+
+
+def test_single_query_is_never_auto_filtered():
+    """Spec: single-satellite queries are never auto-trimmed by group defaults."""
+    client = _build_client_for_group()
+    tle = parse_tle_file(TLE_PATH)
+    start = tle.epoch.astimezone(timezone.utc)
+    end = start + timedelta(hours=24)
+
+    response = client.post(
+        "/passes",
+        json=_passes_request_body(start, end, query="ISS"),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    # Single-sat query must yield at least one pass below 30° over 24 h from NYC.
+    low_passes = [
+        e for e in body["passes"]
+        if e["peak"]["elevation_deg"] < 30.0
+    ]
+    assert low_passes, "expected at least one <30° pass for single ISS query"
+
+
+def test_explicit_min_peak_elevation_overrides_group_default():
+    """Caller's explicit floor wins over the group default."""
+    client = _build_client_for_group()
+    tle = parse_tle_file(TLE_PATH)
+    start = tle.epoch.astimezone(timezone.utc)
+    end = start + timedelta(hours=24)
+
+    response = client.post(
+        "/passes",
+        json=_passes_request_body(
+            start, end, query="stations", min_peak_elevation_deg=10.0,
+        ),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    for event in body["passes"]:
+        assert event["peak"]["elevation_deg"] >= 10.0
+```
+
+- [ ] **Step 4: Run — verify the suite (old + new tests)**
+
+```bash
+pytest tests/api_unit/test_passes_route.py -v
+```
+
+Expected: all original Task 12 tests plus the 4 new ones pass.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add api/schemas/requests.py api/routes/passes.py tests/api_unit/test_passes_route.py
+git commit -m "feat(api): default group filters on /passes"
+```
+
+---
+
 ## Task 13: POST /sky-track
 
 Dense sampling endpoint — for a given TLE + observer + window, returns a list of `TrackSample`. Drives the timeline/animation in M3+.
