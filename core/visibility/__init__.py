@@ -1,4 +1,10 @@
-"""Visibility — darkness, sunlit, magnitude, filtering."""
+"""Visibility — darkness, sunlit, magnitude.
+
+Note: `filter_passes` is intentionally NOT re-exported here. It depends on
+`core.orbital.tracking`, which in turn depends on this package; re-exporting
+`filter_passes` from the package root creates a circular import during module
+load. Import it directly from `core.visibility.filter` instead.
+"""
 from core.visibility.darkness import (
     ASTRONOMICAL_TWILIGHT_DEG,
     CIVIL_TWILIGHT_DEG,
@@ -19,15 +25,6 @@ __all__ = [
     "ISS_INTRINSIC_MAGNITUDE",
     "NAUTICAL_TWILIGHT_DEG",
     "compute_magnitude",
-    "filter_passes",
     "is_observer_in_darkness",
     "is_satellite_sunlit",
 ]
-
-
-def __getattr__(name: str):  # pragma: no cover
-    """Lazy import for filter_passes to avoid circular dependency with core.orbital."""
-    if name == "filter_passes":
-        from core.visibility.filter import filter_passes
-        return filter_passes
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
