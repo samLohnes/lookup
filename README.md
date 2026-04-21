@@ -29,31 +29,23 @@ The golden test (`tests/golden/test_iss_nyc.py`) currently functions as a **regr
 
 ### The ~5-minute human verification
 
-1. **Read the current fixture TLE epoch:**
+Run the helper script:
 
-   ```bash
-   head -2 tests/fixtures/tle/iss_25544.txt
-   ```
+```bash
+python scripts/verify_accuracy.py
+```
 
-   The second line is TLE line 1; columns 19–32 encode the epoch as `YYDDD.FRACTION`. Convert to a calendar date (e.g. `26110.78039753` → 2026 day 110 + 0.78 day ≈ 2026-04-20 18:43 UTC).
+It prints, in one shot:
+- The fixture's TLE epoch and the 24-hour verification window
+- The observer coordinates (NYC)
+- A pre-built **Heavens-Above URL** to open
+- All predicted passes, numbered, with rise/peak/set times and az/el (plus compass labels like `NNE`, `SSW`)
+- The tolerance reminder (±1 s, ±0.1°)
 
-2. **Read the first pass from the baseline:**
+Open the URL in a browser, match the passes one-by-one, and eyeball the numbers. Then **record the result in [docs/accuracy-log.md](docs/accuracy-log.md):**
 
-   ```bash
-   python -c "import json; print(json.load(open('tests/fixtures/expected/iss_nyc_passes.json'))[0])"
-   ```
-
-   Note the `rise_utc`, `peak_utc`, `set_utc`, `peak_az`, `peak_el`.
-
-3. **Compare against Heavens-Above:**
-   - Open https://www.heavens-above.com/PassSummary.aspx?satid=25544
-   - Set observer to NYC (lat 40.7128, lng −74.0060, elevation 10 m).
-   - Find the pass closest to the baseline's `rise_utc`.
-   - Compare rise/peak/set times (tolerance ±1 s) and peak az/el (tolerance ±0.1°).
-
-4. **Record the result in [docs/accuracy-log.md](docs/accuracy-log.md):**
-   - If within tolerance: update the M1 seed row's "Source of truth" and "Result" to reflect actual Heavens-Above verification.
-   - If out of tolerance: do NOT silently update. Open an issue; investigate before any downstream work.
+- Within tolerance → update the M1 seed row's "Source of truth" and "Result" to reflect actual Heavens-Above verification.
+- Out of tolerance → do NOT silently update. Open an issue; investigate before any downstream work.
 
 After this one-time verification, the golden test becomes a true accuracy regression test — any engine change that breaks it is a real correctness bug.
 
