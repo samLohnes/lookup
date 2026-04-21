@@ -37,3 +37,44 @@ def ephemeris(skyfield_loader: Loader):
 def iss_tle_path() -> Path:
     """Path to the committed ISS TLE fixture."""
     return Path(__file__).resolve().parent / "fixtures" / "tle" / "iss_25544.txt"
+
+
+# --- M2 additions below ---
+
+import numpy as np
+
+
+@pytest.fixture(scope="session")
+def synth_dem_tile_bytes(tmp_path_factory: pytest.TempPathFactory):
+    """Generate a tiny synthetic GeoTIFF for DEM tests.
+
+    3x3 grid centered at (0°, 0°), cell size 1e-5°, elevations form a cone
+    peaking at the center (100 m → 120 m going outward).
+    """
+    rasterio = pytest.importorskip("rasterio")
+    from rasterio.transform import from_bounds
+
+    tmp = tmp_path_factory.mktemp("synth-dem")
+    path = tmp / "synth.tif"
+
+    data = np.array(
+        [[100.0, 110.0, 100.0],
+         [110.0, 120.0, 110.0],
+         [100.0, 110.0, 100.0]],
+        dtype=np.float32,
+    )
+    transform = from_bounds(west=-1e-5, south=-1e-5, east=1e-5, north=1e-5,
+                            width=3, height=3)
+    with rasterio.open(
+        path,
+        "w",
+        driver="GTiff",
+        height=3,
+        width=3,
+        count=1,
+        dtype="float32",
+        crs="EPSG:4326",
+        transform=transform,
+    ) as dst:
+        dst.write(data, 1)
+    return path.read_bytes()
