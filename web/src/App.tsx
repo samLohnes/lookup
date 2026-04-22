@@ -1,5 +1,6 @@
 import { Header } from "@/components/layout/header";
 import { AppShell } from "@/components/layout/app-shell";
+import { ObserverPanel } from "@/components/observer/observer-panel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function App() {
@@ -7,23 +8,14 @@ export default function App() {
     <>
       <Header />
       <AppShell
-        left={
-          <Card>
-            <CardHeader>
-              <CardTitle>Observer</CardTitle>
-            </CardHeader>
-            <CardContent className="text-fg-muted">
-              Location, satellite, and time will live here.
-            </CardContent>
-          </Card>
-        }
+        left={<ObserverPanel />}
         main={
           <Card>
             <CardHeader>
               <CardTitle>Passes</CardTitle>
             </CardHeader>
             <CardContent className="text-fg-muted">
-              Timeline + pass list.
+              Coming in the next task.
             </CardContent>
           </Card>
         }
@@ -32,9 +24,7 @@ export default function App() {
             <CardHeader>
               <CardTitle>Sky view</CardTitle>
             </CardHeader>
-            <CardContent className="text-fg-muted">
-              The alt-az dome.
-            </CardContent>
+            <CardContent className="text-fg-muted">Coming later.</CardContent>
           </Card>
         }
       />
