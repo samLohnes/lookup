@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from api.routes.horizon import router as horizon_router
 from api.routes.passes import router as passes_router
 from api.routes.sky_track import router as sky_track_router
+from api.routes.tle_freshness import router as tle_freshness_router
 from api.settings import Settings
 
 
@@ -21,6 +22,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(horizon_router)
     app.include_router(passes_router)
     app.include_router(sky_track_router)
+    app.include_router(tle_freshness_router)
 
     app.state.settings = _settings
     return app
