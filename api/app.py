@@ -4,6 +4,7 @@ from __future__ import annotations
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from api.routes.catalog import router as catalog_router
 from api.routes.horizon import router as horizon_router
 from api.routes.passes import router as passes_router
 from api.routes.sky_track import router as sky_track_router
@@ -37,6 +38,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         """Surface Celestrak fetch failures with the underlying message."""
         return JSONResponse(status_code=500, content={"detail": str(exc)})
 
+    app.include_router(catalog_router)
     app.include_router(horizon_router)
     app.include_router(passes_router)
     app.include_router(sky_track_router)

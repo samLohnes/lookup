@@ -89,6 +89,15 @@ class HorizonResponse(BaseModel):
     samples_deg: list[float]
 
 
+class CatalogHitResponse(BaseModel):
+    """A single fuzzy-search result from the satellite catalog."""
+
+    display_name: str
+    match_type: Literal["satellite", "group"]
+    norad_ids: list[int]
+    score: float
+
+
 class PassesResponse(BaseModel):
     """Top-level response envelope for the /passes endpoint."""
 
