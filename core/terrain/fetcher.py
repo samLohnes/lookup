@@ -63,7 +63,8 @@ class TerrainFetcher:
             )
             self._dem_cache.save_bytes(dem_key, tiff_bytes)
             dem = self._dem_cache.load(dem_key)
-            assert dem is not None, "DEM cache load must succeed after save"
+            if dem is None:
+                raise RuntimeError("DEM cache load failed immediately after save — check disk space/permissions")
 
         mask = compute_horizon_mask(dem=dem, observer=observer)
         self._mask_cache.save(key, mask)
