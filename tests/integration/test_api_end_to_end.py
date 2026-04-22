@@ -19,7 +19,7 @@ from core.catalog.celestrak import CelestrakClient
 from core.catalog.fetcher import TLEFetcher
 from core.catalog.tle_parser import parse_tle_file
 
-CELESTRAK_FIX = Path(__file__).resolve().parents[1] / "fixtures" / "celestrak" / "iss_single.json"
+CELESTRAK_FIX = Path(__file__).resolve().parents[1] / "fixtures" / "celestrak" / "iss_single.txt"
 TLE_PATH = Path(__file__).resolve().parents[1] / "fixtures" / "tle" / "iss_25544.txt"
 
 
