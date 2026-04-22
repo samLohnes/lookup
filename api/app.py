@@ -4,6 +4,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from api.routes.passes import router as passes_router
+from api.routes.sky_track import router as sky_track_router
 from api.settings import Settings
 
 
@@ -17,6 +18,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return {"status": "ok"}
 
     app.include_router(passes_router)
+    app.include_router(sky_track_router)
 
     app.state.settings = _settings
     return app
