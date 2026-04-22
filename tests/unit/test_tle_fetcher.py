@@ -10,8 +10,8 @@ import pytest
 from core.catalog.celestrak import CelestrakClient
 from core.catalog.fetcher import TLEFetcher
 
-FIX_ISS = Path(__file__).resolve().parents[1] / "fixtures" / "celestrak" / "iss_single.json"
-FIX_STATIONS = Path(__file__).resolve().parents[1] / "fixtures" / "celestrak" / "stations_group.json"
+FIX_ISS = Path(__file__).resolve().parents[1] / "fixtures" / "celestrak" / "iss_single.txt"
+FIX_STATIONS = Path(__file__).resolve().parents[1] / "fixtures" / "celestrak" / "stations_group.txt"
 
 
 def _client_from_file(path: Path) -> CelestrakClient:
