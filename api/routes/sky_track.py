@@ -9,7 +9,7 @@ from skyfield.jpllib import SpiceKernel
 
 from api.deps import get_ephemeris, get_timescale, get_tle_fetcher
 from api.schemas.requests import SkyTrackRequest
-from api.schemas.responses import SkyTrackResponse, TrackSampleResponse, track_sample_to_response
+from api.schemas.responses import SkyTrackResponse, track_sample_to_response
 from core._types import Observer
 from core.catalog.fetcher import TLEFetcher
 from core.catalog.search import DEFAULT_CATALOG, resolve
