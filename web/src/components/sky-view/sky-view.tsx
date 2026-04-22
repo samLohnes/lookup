@@ -1,7 +1,8 @@
 import { Dome, DOME_SIZE } from "./dome";
 import { Compass } from "./compass";
+import { HorizonSilhouette } from "./horizon-silhouette";
 
-/** SVG sky view showing the dome, elevation rings, and compass labels. */
+/** SVG sky view showing the dome, elevation rings, compass labels, and terrain horizon silhouette. */
 export function SkyView() {
   return (
     <svg
@@ -11,6 +12,7 @@ export function SkyView() {
       aria-label="Sky view — looking up from the observer"
     >
       <Dome />
+      <HorizonSilhouette />
       <Compass />
     </svg>
   );
