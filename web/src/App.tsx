@@ -2,6 +2,7 @@ import { Header } from "@/components/layout/header";
 import { AppShell } from "@/components/layout/app-shell";
 import { ObserverPanel } from "@/components/observer/observer-panel";
 import { InputsBar } from "@/components/layout/inputs-bar";
+import { PassList } from "@/components/passes/pass-list";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function App() {
@@ -20,8 +21,8 @@ export default function App() {
             <CardHeader>
               <CardTitle>Passes</CardTitle>
             </CardHeader>
-            <CardContent className="text-fg-muted">
-              Coming in the next task.
+            <CardContent>
+              <PassList />
             </CardContent>
           </Card>
         }
