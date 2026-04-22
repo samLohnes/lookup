@@ -8,7 +8,8 @@ from unittest.mock import MagicMock
 import httpx
 import pytest
 from fastapi.testclient import TestClient
-from skyfield.api import load
+from skyfield.api import Timescale
+from skyfield.jpllib import SpiceKernel
 
 from api.app import create_app
 from api.deps import get_ephemeris, get_terrain_fetcher, get_timescale, get_tle_fetcher
@@ -38,7 +39,7 @@ def _fake_terrain() -> MagicMock:
 
 
 @pytest.fixture
-def client(tmp_path):
+def client(tmp_path, timescale: Timescale, ephemeris: SpiceKernel):
     """TestClient wired with a real TLEFetcher (fake HTTP) and mocked terrain."""
     app = create_app(Settings(cache_root=str(tmp_path)))
 
@@ -47,8 +48,8 @@ def client(tmp_path):
         client=tle_client, cache_root=tmp_path,
     )
     app.dependency_overrides[get_terrain_fetcher] = _fake_terrain
-    app.dependency_overrides[get_timescale] = lambda: load.timescale()
-    app.dependency_overrides[get_ephemeris] = lambda: load("de421.bsp")
+    app.dependency_overrides[get_timescale] = lambda: timescale
+    app.dependency_overrides[get_ephemeris] = lambda: ephemeris
     return TestClient(app)
 
 

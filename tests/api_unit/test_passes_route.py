@@ -5,7 +5,8 @@ from datetime import timedelta, timezone
 from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
-from skyfield.api import load
+from skyfield.api import Timescale
+from skyfield.jpllib import SpiceKernel
 
 from api.app import create_app
 from api.deps import get_ephemeris, get_terrain_fetcher, get_timescale, get_tle_fetcher
@@ -31,17 +32,17 @@ def _fake_terrain_fetcher():
     return fake
 
 
-def _build_client() -> TestClient:
+def _build_client(timescale: Timescale, ephemeris: SpiceKernel) -> TestClient:
     app = create_app(Settings(cache_root="/tmp/satvis-test"))
     app.dependency_overrides[get_tle_fetcher] = _fake_tle_fetcher
     app.dependency_overrides[get_terrain_fetcher] = _fake_terrain_fetcher
-    app.dependency_overrides[get_timescale] = lambda: load.timescale()
-    app.dependency_overrides[get_ephemeris] = lambda: load("de421.bsp")
+    app.dependency_overrides[get_timescale] = lambda: timescale
+    app.dependency_overrides[get_ephemeris] = lambda: ephemeris
     return TestClient(app)
 
 
-def test_passes_returns_passes_for_iss():
-    client = _build_client()
+def test_passes_returns_passes_for_iss(timescale, ephemeris):
+    client = _build_client(timescale, ephemeris)
     tle = parse_tle_file(TLE_PATH)
     start = tle.epoch.astimezone(timezone.utc)
     end = start + timedelta(hours=24)
@@ -64,8 +65,8 @@ def test_passes_returns_passes_for_iss():
     assert body["tle_age_seconds"] == 120.0
 
 
-def test_passes_returns_404_when_query_unresolvable():
-    client = _build_client()
+def test_passes_returns_404_when_query_unresolvable(timescale, ephemeris):
+    client = _build_client(timescale, ephemeris)
     tle = parse_tle_file(TLE_PATH)
     start = tle.epoch.astimezone(timezone.utc)
     end = start + timedelta(hours=1)
@@ -100,13 +101,13 @@ def _fake_tle_fetcher_group():
     return fake
 
 
-def _build_client_for_group() -> TestClient:
+def _build_client_for_group(timescale: Timescale, ephemeris: SpiceKernel) -> TestClient:
     """Like _build_client but with get_group_tles mocked too."""
     app = create_app(Settings(cache_root="/tmp/satvis-test"))
     app.dependency_overrides[get_tle_fetcher] = _fake_tle_fetcher_group
     app.dependency_overrides[get_terrain_fetcher] = _fake_terrain_fetcher
-    app.dependency_overrides[get_timescale] = lambda: load.timescale()
-    app.dependency_overrides[get_ephemeris] = lambda: load("de421.bsp")
+    app.dependency_overrides[get_timescale] = lambda: timescale
+    app.dependency_overrides[get_ephemeris] = lambda: ephemeris
     return TestClient(app)
 
 
@@ -125,9 +126,9 @@ def _passes_request_body(start, end, *, query: str, **overrides) -> dict:
     return body
 
 
-def test_group_query_applies_default_30deg_elevation_floor():
+def test_group_query_applies_default_30deg_elevation_floor(timescale, ephemeris):
     """stations group → only passes with peak elevation ≥ 30° remain."""
-    client = _build_client_for_group()
+    client = _build_client_for_group(timescale, ephemeris)
     tle = parse_tle_file(TLE_PATH)
     start = tle.epoch.astimezone(timezone.utc)
     end = start + timedelta(hours=24)
@@ -144,9 +145,9 @@ def test_group_query_applies_default_30deg_elevation_floor():
         assert event["peak"]["elevation_deg"] >= 30.0
 
 
-def test_group_query_with_apply_group_defaults_false_keeps_low_passes():
+def test_group_query_with_apply_group_defaults_false_keeps_low_passes(timescale, ephemeris):
     """Opting out of defaults → low-elevation passes included again."""
-    client = _build_client_for_group()
+    client = _build_client_for_group(timescale, ephemeris)
     tle = parse_tle_file(TLE_PATH)
     start = tle.epoch.astimezone(timezone.utc)
     end = start + timedelta(hours=24)
@@ -166,9 +167,9 @@ def test_group_query_with_apply_group_defaults_false_keeps_low_passes():
     assert len(default_off["passes"]) >= len(default_on["passes"])
 
 
-def test_single_query_is_never_auto_filtered():
+def test_single_query_is_never_auto_filtered(timescale, ephemeris):
     """Spec: single-satellite queries are never auto-trimmed by group defaults."""
-    client = _build_client_for_group()
+    client = _build_client_for_group(timescale, ephemeris)
     tle = parse_tle_file(TLE_PATH)
     start = tle.epoch.astimezone(timezone.utc)
     end = start + timedelta(hours=24)
@@ -188,9 +189,9 @@ def test_single_query_is_never_auto_filtered():
     assert low_passes, "expected at least one <30° pass for single ISS query"
 
 
-def test_explicit_min_peak_elevation_overrides_group_default():
+def test_explicit_min_peak_elevation_overrides_group_default(timescale, ephemeris):
     """Caller's explicit floor wins over the group default."""
-    client = _build_client_for_group()
+    client = _build_client_for_group(timescale, ephemeris)
     tle = parse_tle_file(TLE_PATH)
     start = tle.epoch.astimezone(timezone.utc)
     end = start + timedelta(hours=24)
