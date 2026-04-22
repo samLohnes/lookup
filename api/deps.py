@@ -76,4 +76,5 @@ def get_terrain_fetcher(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> TerrainFetcher:
     """Provide a cached TerrainFetcher backed by OpenTopography and the configured cache."""
-    return _build_terrain_fetcher(settings.cache_root, settings.horizon_radius_km, settings.opentopography_api_key)
+    api_key = settings.opentopography_api_key.get_secret_value() if settings.opentopography_api_key else None
+    return _build_terrain_fetcher(settings.cache_root, settings.horizon_radius_km, api_key)
