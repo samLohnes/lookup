@@ -4,6 +4,7 @@ import { ObserverPanel } from "@/components/observer/observer-panel";
 import { InputsBar } from "@/components/layout/inputs-bar";
 import { PassList } from "@/components/passes/pass-list";
 import { TimelineStrip } from "@/components/passes/timeline-strip";
+import { SkyView } from "@/components/sky-view/sky-view";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function App() {
@@ -33,7 +34,9 @@ export default function App() {
             <CardHeader>
               <CardTitle>Sky view</CardTitle>
             </CardHeader>
-            <CardContent className="text-fg-muted">Coming later.</CardContent>
+            <CardContent>
+              <SkyView />
+            </CardContent>
           </Card>
         }
       />
