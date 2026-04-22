@@ -1,6 +1,7 @@
 import { Dome, DOME_SIZE } from "./dome";
 import { Compass } from "./compass";
 import { HorizonSilhouette } from "./horizon-silhouette";
+import { SatelliteArc } from "./satellite-arc";
 
 /** SVG sky view showing the dome, elevation rings, compass labels, and terrain horizon silhouette. */
 export function SkyView() {
@@ -13,6 +14,7 @@ export function SkyView() {
     >
       <Dome />
       <HorizonSilhouette />
+      <SatelliteArc />
       <Compass />
     </svg>
   );
