@@ -46,3 +46,27 @@ verify:
 # Start the local API on http://127.0.0.1:8765 (SATVIS_HOST / SATVIS_PORT override).
 serve:
     ./scripts/serve.sh
+
+# Install frontend deps (runs npm install in web/).
+web-install:
+    cd web && npm install
+
+# Start the Vite dev server on http://127.0.0.1:5173. Requires `just serve` in another shell.
+web:
+    cd web && npm run dev
+
+# Production build of the frontend → web/dist.
+web-build:
+    cd web && npm run build
+
+# Frontend unit + component tests via vitest.
+web-test:
+    cd web && npm run test -- --run
+
+# Frontend tests in watch mode.
+web-test-watch:
+    cd web && npm run test
+
+# Frontend ESLint.
+web-lint:
+    cd web && npm run lint
