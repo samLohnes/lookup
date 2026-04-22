@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from core._types import DEM, HorizonMask, Observer
 from core.terrain.horizon import compute_horizon_mask

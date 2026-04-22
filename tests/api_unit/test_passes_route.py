@@ -1,7 +1,7 @@
 """Tests for POST /passes route (with mocked upstream fetchers)."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta, timezone
 from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
