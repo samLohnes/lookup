@@ -61,3 +61,38 @@ def test_fetch_raises_on_http_error():
     client = OpenTopoClient(api_key="TESTKEY", transport=transport)
     with pytest.raises(OpenTopoError, match="HTTP 403"):
         client.fetch(lat=0.0, lng=0.0, radius_km=5)
+
+
+# ---------------------------------------------------------------------------
+# bbox validation — pole and antimeridian edge cases
+# ---------------------------------------------------------------------------
+
+
+def test_bbox_rejects_south_pole():
+    """lat=-90 triggered the original bug (Swagger UI default body)."""
+    with pytest.raises(OpenTopoError, match="too close to a pole"):
+        bbox_for_radius_km(lat=-90.0, lng=-180.0, radius_km=50)
+
+
+def test_bbox_rejects_north_pole():
+    with pytest.raises(OpenTopoError, match="too close to a pole"):
+        bbox_for_radius_km(lat=90.0, lng=0.0, radius_km=50)
+
+
+def test_bbox_rejects_near_pole_within_half_degree():
+    """Within ~0.57° of a pole, cos(lat) < 1e-2; we reject upfront."""
+    with pytest.raises(OpenTopoError, match="too close to a pole"):
+        bbox_for_radius_km(lat=89.995, lng=0.0, radius_km=50)
+
+
+def test_bbox_rejects_antimeridian_crossing():
+    """Observer at the date line with a 50 km tile would wrap past ±180°."""
+    with pytest.raises(OpenTopoError, match="antimeridian"):
+        bbox_for_radius_km(lat=0.0, lng=-180.0, radius_km=50)
+
+
+def test_bbox_accepts_high_but_reasonable_latitude():
+    """High-latitude observatories (e.g. Svalbard ~78°N) must still work."""
+    south, north, west, east = bbox_for_radius_km(lat=78.0, lng=15.0, radius_km=50)
+    assert -90.0 <= south < north <= 90.0
+    assert -180.0 <= west < east <= 180.0

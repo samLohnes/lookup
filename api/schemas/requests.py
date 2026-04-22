@@ -38,9 +38,41 @@ class PassesRequest(_ObserverFields):
         ),
     )
 
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "lat": 40.7128,
+                    "lng": -74.0060,
+                    "elevation_m": 10,
+                    "query": "ISS",
+                    "from_utc": "2026-05-01T00:00:00Z",
+                    "to_utc": "2026-05-08T00:00:00Z",
+                    "mode": "line-of-sight",
+                }
+            ]
+        }
+    }
+
 
 class SkyTrackRequest(_ObserverFields):
     query: str = Field(..., min_length=1)
     from_utc: datetime
     to_utc: datetime
     dt_seconds: int = Field(1, ge=1, le=3600)
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "lat": 40.7128,
+                    "lng": -74.0060,
+                    "elevation_m": 10,
+                    "query": "ISS",
+                    "from_utc": "2026-05-01T00:00:00Z",
+                    "to_utc": "2026-05-01T00:10:00Z",
+                    "dt_seconds": 5,
+                }
+            ]
+        }
+    }
