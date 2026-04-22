@@ -1,6 +1,6 @@
 import { useHorizon } from "@/hooks/use-horizon";
 import { useObserverStore } from "@/store/observer";
-import { DOME_CENTER, altAzToXy } from "./dome";
+import { DOME_CENTER, altAzToXy } from "./dome-math";
 
 /** Renders the terrain horizon silhouette as a filled SVG polygon on the sky dome. */
 export function HorizonSilhouette() {

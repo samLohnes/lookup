@@ -1,0 +1,208 @@
+<h2>Which aesthetic direction feels right?</h2>
+<p class="subtitle">Three directions for the 3D earth + sky view. Click one to select, or respond in terminal with thoughts/blends.</p>
+
+<style>
+  .aesthetic-card {
+    cursor: pointer;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #0a0a0a;
+    border: 1px solid rgba(255,255,255,0.08);
+    transition: transform 0.18s ease, border-color 0.18s ease;
+  }
+  .aesthetic-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.25); }
+  .aesthetic-card.selected { border-color: #4fc3f7; box-shadow: 0 0 0 2px rgba(79,195,247,0.3); }
+  .preview { height: 300px; position: relative; overflow: hidden; }
+  .card-meta { padding: 16px; }
+  .card-meta h3 { margin: 0 0 6px 0; font-size: 1.05rem; letter-spacing: 0.02em; }
+  .card-meta p { margin: 0; font-size: 0.85rem; opacity: 0.7; line-height: 1.45; }
+  .card-meta .tag { display: inline-block; margin-top: 10px; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; background: rgba(255,255,255,0.08); }
+
+  /* ===== A: Mission Control ===== */
+  .mc-bg {
+    background: #000;
+    background-image:
+      linear-gradient(rgba(0, 200, 255, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 200, 255, 0.08) 1px, transparent 1px);
+    background-size: 20px 20px;
+    height: 100%;
+    position: relative;
+  }
+  .mc-earth {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 180px; height: 180px; border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #1a3a5c 0%, #0a1a2e 60%, #000 100%);
+    box-shadow: inset 0 0 40px rgba(79, 195, 247, 0.2), 0 0 40px rgba(79, 195, 247, 0.15);
+    border: 1px solid rgba(79, 195, 247, 0.3);
+  }
+  .mc-orbit {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotateX(72deg);
+    width: 260px; height: 260px; border-radius: 50%;
+    border: 1px dashed rgba(79, 195, 247, 0.5);
+  }
+  .mc-sat {
+    position: absolute; top: 32%; left: 62%;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #4fc3f7; box-shadow: 0 0 12px #4fc3f7, 0 0 24px #4fc3f7;
+  }
+  .mc-readout {
+    position: absolute; top: 12px; left: 12px; font-family: 'SF Mono', monospace;
+    font-size: 0.62rem; color: rgba(79, 195, 247, 0.85); line-height: 1.5;
+  }
+  .mc-readout .lbl { opacity: 0.5; }
+  .mc-corner { position: absolute; width: 14px; height: 14px; border: 1px solid rgba(79, 195, 247, 0.6); }
+  .mc-corner.tl { top: 6px; left: 6px; border-right: none; border-bottom: none; }
+  .mc-corner.tr { top: 6px; right: 6px; border-left: none; border-bottom: none; }
+  .mc-corner.bl { bottom: 6px; left: 6px; border-right: none; border-top: none; }
+  .mc-corner.br { bottom: 6px; right: 6px; border-left: none; border-top: none; }
+
+  /* ===== B: Cosmic Editorial ===== */
+  .ce-bg {
+    background: radial-gradient(ellipse at center, #0a0a14 0%, #000 80%);
+    height: 100%; position: relative; overflow: hidden;
+  }
+  .ce-stars {
+    position: absolute; inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 20px 30px, white, transparent),
+      radial-gradient(1px 1px at 60px 70px, white, transparent),
+      radial-gradient(1px 1px at 120px 40px, rgba(255,255,255,0.6), transparent),
+      radial-gradient(1px 1px at 180px 110px, white, transparent),
+      radial-gradient(1px 1px at 250px 60px, rgba(255,255,255,0.5), transparent),
+      radial-gradient(1px 1px at 320px 150px, white, transparent),
+      radial-gradient(1px 1px at 80px 180px, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1px 1px at 220px 220px, white, transparent),
+      radial-gradient(1px 1px at 360px 250px, rgba(255,255,255,0.6), transparent);
+    opacity: 0.9;
+  }
+  .ce-earth {
+    position: absolute; top: 58%; left: 50%; transform: translate(-50%, -50%);
+    width: 220px; height: 220px; border-radius: 50%;
+    background:
+      radial-gradient(circle at 35% 35%, #2d5f8b 0%, #1a3a5c 30%, #0e1e35 60%, #050a14 100%);
+    box-shadow:
+      inset -20px -20px 60px rgba(0,0,0,0.6),
+      inset 10px 10px 40px rgba(120, 180, 255, 0.08),
+      0 0 80px rgba(100, 150, 255, 0.12);
+  }
+  .ce-earth::after {
+    content: ''; position: absolute; inset: 0; border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, transparent 40%, rgba(0,0,0,0.5) 100%);
+  }
+  .ce-arc {
+    position: absolute; top: 30%; left: 15%;
+    width: 70%; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.7), transparent);
+    transform: rotate(-12deg);
+  }
+  .ce-title {
+    position: absolute; top: 16px; left: 18px;
+    font-family: 'Georgia', serif; font-size: 0.75rem; letter-spacing: 0.25em;
+    color: rgba(255,255,255,0.5); text-transform: uppercase;
+  }
+
+  /* ===== C: Topo Data Viz ===== */
+  .td-bg {
+    background: #f4f1ea;
+    height: 100%; position: relative; overflow: hidden;
+  }
+  .td-topo {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 260px; height: 260px; border-radius: 50%;
+    background:
+      repeating-radial-gradient(circle,
+        #5a7a6b 0,
+        #5a7a6b 2px,
+        transparent 2px,
+        transparent 14px);
+    opacity: 0.85;
+    mask: radial-gradient(circle, black 60%, transparent 70%);
+  }
+  .td-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(90, 122, 107, 0.12) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(90, 122, 107, 0.12) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .td-arc {
+    position: absolute; top: 20%; left: 8%;
+    width: 84%; height: 62%;
+    border: 2px solid #e85c39;
+    border-color: #e85c39 transparent transparent transparent;
+    border-radius: 50%;
+  }
+  .td-dot {
+    position: absolute; top: 35%; right: 18%;
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #e85c39; border: 2px solid #f4f1ea;
+  }
+  .td-label {
+    position: absolute; top: 12px; left: 14px;
+    font-family: 'SF Mono', monospace; font-size: 0.65rem;
+    color: #5a7a6b; letter-spacing: 0.08em;
+  }
+  .td-label .accent { color: #e85c39; }
+</style>
+
+<div class="options" style="grid-template-columns: repeat(3, 1fr); gap: 18px;">
+
+  <div class="option aesthetic-card" data-choice="mission-control" onclick="toggleSelect(this)" style="padding: 0; display: block;">
+    <div class="preview mc-bg">
+      <div class="mc-corner tl"></div><div class="mc-corner tr"></div>
+      <div class="mc-corner bl"></div><div class="mc-corner br"></div>
+      <div class="mc-readout">
+        <div><span class="lbl">OBJ</span> ISS (ZARYA)</div>
+        <div><span class="lbl">ALT</span> 408.2 km</div>
+        <div><span class="lbl">AZ</span> 247.3°</div>
+        <div><span class="lbl">EL</span> 52.1°</div>
+        <div><span class="lbl">VIS</span> +0:03:42</div>
+      </div>
+      <div class="mc-orbit"></div>
+      <div class="mc-earth"></div>
+      <div class="mc-sat"></div>
+    </div>
+    <div class="card-meta">
+      <h3>A — Mission Control</h3>
+      <p>Dense technical readouts, grid overlays, cyan accents on pure black. Feels like watching a pass from the flight deck. Maximum data density.</p>
+      <span class="tag">DARK · TECHNICAL · DENSE</span>
+    </div>
+  </div>
+
+  <div class="option aesthetic-card" data-choice="cosmic-editorial" onclick="toggleSelect(this)" style="padding: 0; display: block;">
+    <div class="preview ce-bg">
+      <div class="ce-stars"></div>
+      <div class="ce-title">Visible Pass · 21:47 UTC</div>
+      <div class="ce-arc"></div>
+      <div class="ce-earth"></div>
+    </div>
+    <div class="card-meta">
+      <h3>B — Cosmic Editorial</h3>
+      <p>Photographic earth, deep space, serif accents, generous whitespace. UI recedes; the sky is the subject. Feels like a magazine spread.</p>
+      <span class="tag">CINEMATIC · QUIET · PHOTO</span>
+    </div>
+  </div>
+
+  <div class="option aesthetic-card" data-choice="topo-dataviz" onclick="toggleSelect(this)" style="padding: 0; display: block;">
+    <div class="preview td-bg">
+      <div class="td-grid"></div>
+      <div class="td-topo"></div>
+      <div class="td-arc"></div>
+      <div class="td-dot"></div>
+      <div class="td-label">
+        <div>PASS 03 · <span class="accent">ISS</span></div>
+        <div>MAX EL 52° · DUR 4:12</div>
+      </div>
+    </div>
+    <div class="card-meta">
+      <h3>C — Topographic Data-Viz</h3>
+      <p>Warm paper tones, topo contour lines, single accent color for orbital paths. Cartographic feel — reads like a planning map, not a simulation.</p>
+      <span class="tag">LIGHT · ANALOG · CARTOGRAPHIC</span>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top: 24px; font-size: 0.85rem;">
+  These are directions, not final designs. Any of them can accommodate both the 3D earth view and the sky view. Tell me in the terminal which feels right — or describe a blend.
+</p>

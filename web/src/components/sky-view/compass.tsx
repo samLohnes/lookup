@@ -1,4 +1,4 @@
-import { DOME_CENTER, DOME_RADIUS, altAzToXy } from "./dome";
+import { DOME_CENTER, DOME_RADIUS, altAzToXy } from "./dome-math";
 
 const DIRS = [
   { label: "N", az: 0 },
