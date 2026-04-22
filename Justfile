@@ -23,9 +23,9 @@ test-unit:
 test-golden:
     source .venv/bin/activate && pytest tests/golden tests/integration -v
 
-# Run the full suite with coverage reporting.
+# Run the full suite with coverage reporting (core + api).
 cov:
-    source .venv/bin/activate && pytest --cov=core --cov-report=term-missing
+    source .venv/bin/activate && pytest --cov=core --cov=api --cov-report=term-missing
 
 # Run ruff lint across source and tests.
 lint:
