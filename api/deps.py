@@ -1,6 +1,7 @@
 """FastAPI dependency providers — the hooks tests override for mocking."""
 from __future__ import annotations
 
+from datetime import timedelta
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
@@ -44,22 +45,35 @@ def get_ephemeris(
     return _skyfield_loader(settings.cache_root)("de421.bsp")
 
 
+@lru_cache(maxsize=1)
+def _build_tle_fetcher(cache_root: str, max_age_hours: int) -> TLEFetcher:
+    """Construct a singleton TLEFetcher; keyed so settings changes still rebuild."""
+    return TLEFetcher(
+        client=CelestrakClient(),
+        cache_root=Path(cache_root),
+        max_age=timedelta(hours=max_age_hours),
+    )
+
+
 def get_tle_fetcher(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> TLEFetcher:
-    """Provide a TLEFetcher backed by Celestrak and the configured cache."""
-    return TLEFetcher(
-        client=CelestrakClient(),
-        cache_root=Path(settings.cache_root),
+    """Provide a cached TLEFetcher backed by Celestrak and the configured cache."""
+    return _build_tle_fetcher(settings.cache_root, settings.tle_max_age_hours)
+
+
+@lru_cache(maxsize=None)
+def _build_terrain_fetcher(cache_root: str, radius_km: int, api_key: str | None) -> TerrainFetcher:
+    """Construct a singleton TerrainFetcher; keyed on (cache_root, radius_km, api_key)."""
+    return TerrainFetcher(
+        client=OpenTopoClient(api_key=api_key),
+        cache_root=Path(cache_root),
+        radius_km=radius_km,
     )
 
 
 def get_terrain_fetcher(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> TerrainFetcher:
-    """Provide a TerrainFetcher backed by OpenTopography and the configured cache."""
-    return TerrainFetcher(
-        client=OpenTopoClient(api_key=settings.opentopography_api_key),
-        cache_root=Path(settings.cache_root),
-        radius_km=settings.horizon_radius_km,
-    )
+    """Provide a cached TerrainFetcher backed by OpenTopography and the configured cache."""
+    return _build_terrain_fetcher(settings.cache_root, settings.horizon_radius_km, settings.opentopography_api_key)
