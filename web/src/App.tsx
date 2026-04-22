@@ -1,6 +1,7 @@
 import { Header } from "@/components/layout/header";
 import { AppShell } from "@/components/layout/app-shell";
 import { ObserverPanel } from "@/components/observer/observer-panel";
+import { InputsBar } from "@/components/layout/inputs-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function App() {
@@ -8,7 +9,12 @@ export default function App() {
     <>
       <Header />
       <AppShell
-        left={<ObserverPanel />}
+        left={
+          <>
+            <ObserverPanel />
+            <InputsBar />
+          </>
+        }
         main={
           <Card>
             <CardHeader>
