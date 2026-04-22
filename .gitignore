@@ -37,3 +37,8 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Frontend
+web/node_modules/
+web/dist/
+web/.vite/
