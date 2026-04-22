@@ -138,6 +138,13 @@ def trainpass_to_response(tp: TrainPass) -> TrainPassResponse:
     )
 
 
+class SkyTrackResponse(BaseModel):
+    """Response envelope for POST /sky-track."""
+
+    resolved_name: str
+    samples: list[TrackSampleResponse]
+
+
 def track_sample_to_response(s: TrackSample) -> TrackSampleResponse:
     """Convert a TrackSample dataclass to its JSON response model."""
     return TrackSampleResponse(

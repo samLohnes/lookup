@@ -4,26 +4,18 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
 from skyfield.api import Timescale
 from skyfield.jpllib import SpiceKernel
 
 from api.deps import get_ephemeris, get_timescale, get_tle_fetcher
 from api.schemas.requests import SkyTrackRequest
-from api.schemas.responses import TrackSampleResponse, track_sample_to_response
+from api.schemas.responses import SkyTrackResponse, TrackSampleResponse, track_sample_to_response
 from core._types import Observer
 from core.catalog.fetcher import TLEFetcher
 from core.catalog.search import DEFAULT_CATALOG, resolve
 from core.orbital.tracking import sample_track
 
 router = APIRouter()
-
-
-class SkyTrackResponse(BaseModel):
-    """Response envelope for POST /sky-track."""
-
-    resolved_name: str
-    samples: list[TrackSampleResponse]
 
 
 @router.post("/sky-track", response_model=SkyTrackResponse)
