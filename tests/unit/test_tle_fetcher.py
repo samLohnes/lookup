@@ -7,7 +7,6 @@ from pathlib import Path
 import httpx
 import pytest
 
-from core._types import TLE
 from core.catalog.celestrak import CelestrakClient
 from core.catalog.fetcher import TLEFetcher
 

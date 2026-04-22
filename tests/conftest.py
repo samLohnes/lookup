@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
 import pytest
 from skyfield.api import Loader
 
@@ -40,8 +41,6 @@ def iss_tle_path() -> Path:
 
 
 # --- M2 additions below ---
-
-import numpy as np
 
 
 @pytest.fixture(scope="session")

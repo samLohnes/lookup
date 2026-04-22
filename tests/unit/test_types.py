@@ -3,9 +3,11 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import numpy as np
 import pytest
 
 from core._types import (
+    DEM,
     AngularPosition,
     CatalogHit,
     Observer,
@@ -14,6 +16,7 @@ from core._types import (
     Resolution,
     TLE,
     TrackSample,
+    TrainPass,
     VisibilityMode,
 )
 
@@ -124,10 +127,6 @@ def test_resolution_single_and_group():
 
 
 # --- M2 additions below ---
-
-import numpy as np
-
-from core._types import DEM, TrainPass
 
 
 def test_train_pass_construction():
