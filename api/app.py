@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
+from api.routes.horizon import router as horizon_router
 from api.routes.passes import router as passes_router
 from api.routes.sky_track import router as sky_track_router
 from api.settings import Settings
@@ -17,6 +18,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    app.include_router(horizon_router)
     app.include_router(passes_router)
     app.include_router(sky_track_router)
 
