@@ -1,4 +1,5 @@
-import { Dome, DOME_SIZE } from "./dome";
+import { Dome } from "./dome";
+import { DOME_SIZE } from "./dome-math";
 import { Compass } from "./compass";
 import { HorizonSilhouette } from "./horizon-silhouette";
 import { SatelliteArc } from "./satellite-arc";

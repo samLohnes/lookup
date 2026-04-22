@@ -1,5 +1,5 @@
 import { useCurrentSkyTrack } from "@/hooks/use-current-sky-track";
-import { altAzToXy } from "./dome";
+import { altAzToXy } from "./dome-math";
 
 /** Renders the arc and peak dot for the currently selected pass on the sky dome. */
 export function SatelliteArc() {
