@@ -29,11 +29,11 @@ cov:
 
 # Run ruff lint across source and tests.
 lint:
-    source .venv/bin/activate && ruff check core tests scripts
+    source .venv/bin/activate && ruff check core api tests scripts
 
 # Run ruff with --fix to auto-fix what it can.
 lint-fix:
-    source .venv/bin/activate && ruff check --fix core tests scripts
+    source .venv/bin/activate && ruff check --fix core api tests scripts
 
 # Run the M1 demo CLI (ISS over NYC by default).
 demo *ARGS:
