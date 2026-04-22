@@ -20,10 +20,16 @@ export function TimelineStrip() {
     const bars = data.passes.map((p) => {
       const t0 = new Date(p.rise.time).getTime();
       const t1 = new Date(p.set.time).getTime();
+      // Clamp to [0, 100] so passes that started before fromUtc or end
+      // after toUtc still render inside the strip rather than overflowing.
+      const rawLeft = ((t0 - start) / span) * 100;
+      const rawRight = ((t1 - start) / span) * 100;
+      const leftPct = Math.min(Math.max(rawLeft, 0), 100);
+      const rightPct = Math.min(Math.max(rawRight, 0), 100);
       return {
         id: p.id,
-        leftPct: ((t0 - start) / span) * 100,
-        widthPct: Math.max(((t1 - t0) / span) * 100, 0.4),
+        leftPct,
+        widthPct: Math.max(rightPct - leftPct, 0.4),
       };
     });
 
