@@ -1,15 +1,6 @@
-import { useSatelliteStore } from "@/store/satellite";
-import { useTleFreshness } from "@/hooks/use-tle-freshness";
-import { formatAge } from "@/lib/format";
-import { DisplayTzToggle } from "@/components/layout/display-tz-toggle";
+import { ChromeCluster } from "@/components/layout/chrome-cluster";
 
 export function Header() {
-  const query = useSatelliteStore((s) => s.query);
-  const { data } = useTleFreshness(query);
-  const epochLine = data?.[0]
-    ? `${data[0].name} · TLE ${formatAge(data[0].fetched_age_seconds)} old`
-    : null;
-
   return (
     <header className="border-b border-edge bg-bg-raised">
       <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
@@ -17,14 +8,8 @@ export function Header() {
           <span className="serif-accent text-xl">Orbit Observer</span>
           <span className="label-upper">Research-grade satellite tracker</span>
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <DisplayTzToggle />
-          <div className="text-xs text-fg-muted">
-            {epochLine ?? "Satellite: none selected"}
-          </div>
-        </div>
+        <ChromeCluster />
       </div>
     </header>
   );
 }
-
