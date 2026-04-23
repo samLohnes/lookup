@@ -25,14 +25,20 @@ export function subSolarPoint(date: Date): { lat: number; lng: number } {
   return { lat: declDeg, lng: lngDeg };
 }
 
-/** Earth-fixed sun-direction unit vector. */
+/** Earth-fixed sun-direction unit vector.
+ *
+ *  Uses the same lat/lng → Cartesian convention as `latLngAltToVec3` in
+ *  `@/lib/geo3d` (+y = north, -z = east). This is what the earth day/night
+ *  shader consumes as the `sunDir` uniform — a divergence from the earth
+ *  mesh's own orientation would rotate the terminator around the wrong
+ *  axis. */
 export function sunDirectionForDate(date: Date): Vec3 {
   const { lat, lng } = subSolarPoint(date);
   const latR = lat * DEG;
   const lngR = lng * DEG;
   return {
     x: Math.cos(latR) * Math.cos(lngR),
-    y: Math.cos(latR) * Math.sin(lngR),
-    z: Math.sin(latR),
+    y: Math.sin(latR),
+    z: -Math.cos(latR) * Math.sin(lngR),
   };
 }
