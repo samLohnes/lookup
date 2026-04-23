@@ -109,3 +109,9 @@ export interface SkyTrackResponseBody {
   resolved_name: string;
   samples: TrackSampleResponse[];
 }
+
+export interface GeoTimezoneResponse {
+  lat: number;
+  lng: number;
+  timezone: string; // IANA name
+}
