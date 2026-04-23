@@ -98,6 +98,14 @@ class CatalogHitResponse(BaseModel):
     score: float
 
 
+class GeoTimezoneResponse(BaseModel):
+    """IANA timezone at a given observer location."""
+
+    lat: float
+    lng: float
+    timezone: str  # IANA name, e.g. "America/New_York" or "Etc/GMT+5" for ocean points
+
+
 class PassesResponse(BaseModel):
     """Top-level response envelope for the /passes endpoint."""
 
