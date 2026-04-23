@@ -7,13 +7,15 @@ directions and a pre-built Heavens-Above URL — so a human can open the URL
 and compare the numbers quickly.
 
 Usage:
-    python scripts/verify_accuracy.py
+    python scripts/verify_accuracy.py              # human-readable text
+    python scripts/verify_accuracy.py --markdown   # markdown table rows ready to paste
 
 Then open the printed URL, find the matching passes, and record any deltas
 in `docs/accuracy-log.md`. Tolerance: ±1 s on times, ±0.1° on azimuth/elevation.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 import urllib.parse
@@ -64,20 +66,8 @@ def fmt_azel(az_deg: float, el_deg: float) -> str:
     return f"az {az_deg:6.2f}° ({compass_direction(az_deg):>3})  el {el_deg:5.2f}°"
 
 
-def main() -> int:
-    if not FIXTURE_TLE.exists():
-        print(f"error: fixture TLE not found at {FIXTURE_TLE}", file=sys.stderr)
-        return 1
-    if not BASELINE.exists():
-        print(f"error: baseline JSON not found at {BASELINE}", file=sys.stderr)
-        return 1
-
-    tle = parse_tle_file(FIXTURE_TLE)
-    passes = json.loads(BASELINE.read_text())
-
-    start = tle.epoch.astimezone(timezone.utc)
-    end = start + timedelta(hours=24)
-
+def _emit_text(tle, passes: list, start: datetime, end: datetime) -> None:
+    """Print the human-readable verification report (original behavior)."""
     bar = "═" * 72
     sub = "─" * 72
 
@@ -125,6 +115,57 @@ def main() -> int:
     print("  • Within tolerance → update the M1 seed row to reflect Heavens-Above verification.")
     print("  • Out of tolerance → do NOT silently update. Open an issue and investigate.")
     print(bar)
+
+
+def _emit_markdown(tle, passes: list, start: datetime, end: datetime) -> None:
+    """Print one markdown table row per pass, ready to paste into
+    docs/accuracy-log.md. Columns match the existing table there."""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    window = f"{start.strftime('%Y-%m-%d %H:%M')} → {end.strftime('%Y-%m-%d %H:%M')} UTC"
+
+    print("<!-- paste one row per verified pass into docs/accuracy-log.md -->")
+    print()
+    for i, p in enumerate(passes, 1):
+        peak_t = datetime.fromisoformat(p["peak_utc"])
+        scenario = (
+            f"ISS pass {i}/{len(passes)} over {OBSERVER_NAME}, "
+            f"peak {peak_t.strftime('%H:%M')} UTC, "
+            f"az {p['peak_az']:.0f}° / el {p['peak_el']:.0f}°"
+        )
+        source = "Heavens-Above PassSummary (visual cross-check)"
+        result = "TODO: fill in delta vs Heavens-Above (± s, ± °) after comparing"
+        notes = f"TLE epoch {tle.epoch.strftime('%Y-%m-%d')}; window {window}"
+        print(f"| {today} | {scenario} | {source} | {result} | {notes} |")
+    print()
+    print("After filling in results, commit `docs/accuracy-log.md` separately.")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument(
+        "--markdown",
+        action="store_true",
+        help="Emit markdown table rows sized for docs/accuracy-log.md instead of the human-readable report.",
+    )
+    args = parser.parse_args()
+
+    if not FIXTURE_TLE.exists():
+        print(f"error: fixture TLE not found at {FIXTURE_TLE}", file=sys.stderr)
+        return 1
+    if not BASELINE.exists():
+        print(f"error: baseline JSON not found at {BASELINE}", file=sys.stderr)
+        return 1
+
+    tle = parse_tle_file(FIXTURE_TLE)
+    passes = json.loads(BASELINE.read_text())
+
+    start = tle.epoch.astimezone(timezone.utc)
+    end = start + timedelta(hours=24)
+
+    if args.markdown:
+        _emit_markdown(tle, passes, start, end)
+    else:
+        _emit_text(tle, passes, start, end)
 
     return 0
 
