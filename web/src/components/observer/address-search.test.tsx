@@ -4,16 +4,18 @@ import { renderWithProviders, screen, userEvent } from "@/test/render";
 import { AddressSearch } from "@/components/observer/address-search";
 import { server } from "@/test/msw/server";
 import { useObserverStore } from "@/store/observer";
+import { useDraftInputsStore } from "@/store/draft-inputs";
 
 beforeEach(() => {
   useObserverStore.setState({
     current: { lat: 0, lng: 0, elevation_m: 0, name: "test" },
     saved: [],
   });
+  useDraftInputsStore.getState().initFromCommitted();
 });
 
 describe("AddressSearch", () => {
-  it("debounces typed input, fetches, and updates observer on suggestion click", async () => {
+  it("debounces typed input, fetches, and updates draft observer on suggestion click", async () => {
     server.use(
       http.get("https://nominatim.openstreetmap.org/search", () =>
         HttpResponse.json([
@@ -34,9 +36,10 @@ describe("AddressSearch", () => {
     const suggestion = await screen.findByText(/Brooklyn, Kings County, NY, USA/);
     await userEvent.click(suggestion);
 
-    const obs = useObserverStore.getState().current;
-    expect(obs.lat).toBeCloseTo(40.6782, 3);
-    expect(obs.lng).toBeCloseTo(-73.9442, 3);
-    expect(obs.name).toContain("Brooklyn");
+    // Writes go to the draft store — the committed observer only moves on Run.
+    const draft = useDraftInputsStore.getState().draft.observer;
+    expect(draft.lat).toBeCloseTo(40.6782, 3);
+    expect(draft.lng).toBeCloseTo(-73.9442, 3);
+    expect(draft.name).toContain("Brooklyn");
   });
 });

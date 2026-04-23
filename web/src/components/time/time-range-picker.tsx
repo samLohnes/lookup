@@ -1,11 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useTimeRangeStore } from "@/store/time-range";
+import { useTimeRangeStore, computePresetWindow } from "@/store/time-range";
+import { useDraftInputsStore } from "@/store/draft-inputs";
 import { toLocalInput, fromLocalInput } from "@/lib/datetime";
 
 export function TimeRangePicker() {
-  const { fromUtc, toUtc, setRange, applyPreset } = useTimeRangeStore();
+  const { fromUtc, toUtc } = useTimeRangeStore();
+  const setDraftWindow = useDraftInputsStore((s) => s.setDraftWindow);
 
   return (
     <div className="space-y-3">
@@ -15,7 +17,9 @@ export function TimeRangePicker() {
           id="from-utc"
           type="datetime-local"
           value={toLocalInput(fromUtc)}
-          onChange={(e) => setRange(fromLocalInput(e.target.value), toUtc)}
+          onChange={(e) =>
+            setDraftWindow({ fromUtc: fromLocalInput(e.target.value), toUtc })
+          }
         />
       </div>
       <div>
@@ -24,18 +28,32 @@ export function TimeRangePicker() {
           id="to-utc"
           type="datetime-local"
           value={toLocalInput(toUtc)}
-          onChange={(e) => setRange(fromUtc, fromLocalInput(e.target.value))}
+          onChange={(e) =>
+            setDraftWindow({ fromUtc, toUtc: fromLocalInput(e.target.value) })
+          }
         />
       </div>
 
       <div className="flex gap-2 flex-wrap">
-        <Button variant="outline" size="sm" onClick={() => applyPreset(24)}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setDraftWindow(computePresetWindow(24))}
+        >
           Next 24 h
         </Button>
-        <Button variant="outline" size="sm" onClick={() => applyPreset(72)}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setDraftWindow(computePresetWindow(72))}
+        >
           Next 3 d
         </Button>
-        <Button variant="outline" size="sm" onClick={() => applyPreset(168)}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setDraftWindow(computePresetWindow(168))}
+        >
           Next 7 d
         </Button>
       </div>

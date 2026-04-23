@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useGeocode } from "@/hooks/use-geocode";
-import { useObserverStore } from "@/store/observer";
+import { useDraftInputsStore } from "@/store/draft-inputs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -16,7 +16,8 @@ function useDebouncedEffect(fn: () => void, delay: number, deps: unknown[]) {
 export function AddressSearch() {
   const [input, setInput] = useState("");
   const [debounced, setDebounced] = useState("");
-  const setCurrent = useObserverStore((s) => s.setCurrent);
+  const draftObserver = useDraftInputsStore((s) => s.draft.observer);
+  const setDraftObserver = useDraftInputsStore((s) => s.setDraftObserver);
   const { data, isFetching } = useGeocode(debounced);
 
   // Debounce typing.
@@ -38,7 +39,8 @@ export function AddressSearch() {
               <button
                 className="w-full text-left px-3 py-2 text-sm hover:bg-edge"
                 onClick={() => {
-                  setCurrent({
+                  setDraftObserver({
+                    ...draftObserver,
                     lat: hit.lat,
                     lng: hit.lng,
                     name: hit.display_name.split(",").slice(0, 2).join(",").trim(),

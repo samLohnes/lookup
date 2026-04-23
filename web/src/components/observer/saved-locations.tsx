@@ -3,10 +3,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useObserverStore } from "@/store/observer";
+import { useDraftInputsStore } from "@/store/draft-inputs";
 
 export function SavedLocations() {
-  const { current, saved, addSaved, removeSaved, applySaved } = useObserverStore();
+  const { current, saved, addSaved, removeSaved } = useObserverStore();
+  const setDraftObserver = useDraftInputsStore((s) => s.setDraftObserver);
   const [name, setName] = useState("");
+
+  /** Apply a saved location to the draft observer (committed store moves on Run). */
+  const applySavedToDraft = (id: string) => {
+    const target = saved.find((l) => l.id === id);
+    if (!target) return;
+    setDraftObserver({
+      lat: target.lat,
+      lng: target.lng,
+      elevation_m: target.elevation_m,
+      name: target.name,
+    });
+  };
 
   return (
     <div className="space-y-3">
@@ -20,7 +34,7 @@ export function SavedLocations() {
         {saved.map((loc) => (
           <li key={loc.id} className="flex items-center justify-between gap-2">
             <button
-              onClick={() => applySaved(loc.id)}
+              onClick={() => applySavedToDraft(loc.id)}
               className="flex-1 text-left text-sm px-2 py-1 rounded hover:bg-edge"
               title={`${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}`}
             >
