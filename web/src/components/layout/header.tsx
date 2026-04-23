@@ -1,6 +1,7 @@
 import { useSatelliteStore } from "@/store/satellite";
 import { useTleFreshness } from "@/hooks/use-tle-freshness";
 import { formatAge } from "@/lib/format";
+import { DisplayTzToggle } from "@/components/layout/display-tz-toggle";
 
 export function Header() {
   const query = useSatelliteStore((s) => s.query);
@@ -16,8 +17,11 @@ export function Header() {
           <span className="serif-accent text-xl">Orbit Observer</span>
           <span className="label-upper">Research-grade satellite tracker</span>
         </div>
-        <div className="text-xs text-fg-muted">
-          {epochLine ?? "Satellite: none selected"}
+        <div className="flex flex-col items-end gap-1">
+          <DisplayTzToggle />
+          <div className="text-xs text-fg-muted">
+            {epochLine ?? "Satellite: none selected"}
+          </div>
         </div>
       </div>
     </header>
