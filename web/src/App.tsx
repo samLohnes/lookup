@@ -4,10 +4,18 @@ import { ObserverPanel } from "@/components/observer/observer-panel";
 import { InputsBar } from "@/components/layout/inputs-bar";
 import { PassList } from "@/components/passes/pass-list";
 import { TimelineStrip } from "@/components/passes/timeline-strip";
-import { SkyView } from "@/components/sky-view/sky-view";
+import { HeroPanel } from "@/components/hero/hero-panel";
+import { TelemetryRail } from "@/components/telemetry/telemetry-rail";
+import { PlaybackBar } from "@/components/playback/playback-bar";
+import { useCursorReset } from "@/hooks/use-cursor-reset";
+import { usePlaybackLoop } from "@/hooks/use-playback-loop";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function App() {
+  // Wire global side-effects once.
+  useCursorReset();
+  usePlaybackLoop();
+
   return (
     <>
       <Header />
@@ -30,14 +38,11 @@ export default function App() {
           </Card>
         }
         side={
-          <Card>
-            <CardHeader>
-              <CardTitle>Sky view</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <SkyView />
-            </CardContent>
-          </Card>
+          <>
+            <HeroPanel />
+            <PlaybackBar />
+            <TelemetryRail />
+          </>
         }
       />
     </>
