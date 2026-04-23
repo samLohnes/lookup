@@ -24,14 +24,15 @@ function formatDurationShort(seconds: number): string {
  */
 export function PassRail() {
   const [expanded, setExpanded] = useState(false);
-  const { data: passes } = useCurrentPasses();
+  const { data } = useCurrentPasses();
+  const passes: PassItem[] = data?.passes ?? [];
   const selectedId = useSelectionStore((s) => s.selectedPassId);
   const setSelection = useSelectionStore((s) => s.select);
   const tzMode = useDisplayTzStore((s) => s.mode);
   const { data: observerTzData } = useObserverTimezone();
   const observerTz = observerTzData?.timezone ?? "UTC";
 
-  if (!passes || passes.length === 0) return null;
+  if (passes.length === 0) return null;
 
   const widthClass = expanded ? "w-[300px]" : "w-[70px]";
 
