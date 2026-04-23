@@ -18,6 +18,7 @@ describe("HeroPanel", () => {
     renderWithProviders(<HeroPanel />);
     await userEvent.click(screen.getByRole("button", { name: "Earth" }));
     expect(screen.getByText("Earth view")).toBeInTheDocument();
-    expect(screen.getByTestId("earth-stub")).toBeInTheDocument();
+    // EarthView is lazy-loaded; await the dynamic import resolving.
+    expect(await screen.findByTestId("earth-stub")).toBeInTheDocument();
   });
 });
