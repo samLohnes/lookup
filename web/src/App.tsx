@@ -4,6 +4,7 @@ import { ObserverPanel } from "@/components/observer/observer-panel";
 import { InputsBar } from "@/components/layout/inputs-bar";
 import { PassList } from "@/components/passes/pass-list";
 import { TimelineStrip } from "@/components/passes/timeline-strip";
+import { TonightCard } from "@/components/passes/tonight-card";
 import { HeroPanel } from "@/components/hero/hero-panel";
 import { TelemetryRail } from "@/components/telemetry/telemetry-rail";
 import { PlaybackBar } from "@/components/playback/playback-bar";
@@ -32,6 +33,7 @@ export default function App() {
               <CardTitle>Passes</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <TonightCard />
               <TimelineStrip />
               <PassList />
             </CardContent>
