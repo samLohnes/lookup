@@ -27,4 +27,22 @@ export const handlers = [
       tle_age_seconds: 0,
     }),
   ),
+
+  http.get("/api/tle-freshness", () => HttpResponse.json([])),
+
+  http.get("/api/horizon", () =>
+    HttpResponse.json({
+      lat: 40.7128,
+      lng: -74.006,
+      radius_km: 50,
+      samples_deg: new Array(360).fill(0),
+    }),
+  ),
+
+  http.post("/api/sky-track", () =>
+    HttpResponse.json({
+      resolved_name: "ISS (ZARYA)",
+      samples: [],
+    }),
+  ),
 ];
