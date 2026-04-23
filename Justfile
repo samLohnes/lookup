@@ -40,8 +40,8 @@ demo *ARGS:
     source .venv/bin/activate && python scripts/demo.py {{ARGS}}
 
 # Run the accuracy verification helper (prints engine passes + Heavens-Above URL).
-verify:
-    source .venv/bin/activate && python scripts/verify_accuracy.py
+verify *ARGS:
+    source .venv/bin/activate && python scripts/verify_accuracy.py {{ARGS}}
 
 # Start the local API on http://127.0.0.1:8765 (SATVIS_HOST / SATVIS_PORT override).
 serve:
