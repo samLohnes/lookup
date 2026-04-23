@@ -4,6 +4,13 @@ import { useSelectionStore } from "@/store/selection";
 import { useObserverStore } from "@/store/observer";
 import { SkyView } from "@/components/sky-view/sky-view";
 
+/** Pixels of clearance from the right edge — clears the pass rail (~70px
+ *  wide + a small gap). */
+const PIP_RIGHT_MARGIN_PX = 80;
+/** Pixels of clearance from the bottom edge — clears the playback dock
+ *  (~44px tall + padding). */
+const PIP_BOTTOM_MARGIN_PX = 68;
+
 /** Floating, draggable, resizable PiP sky view. Auto-opens when a pass is
  *  selected; user can close, drag, or resize (aspect locked 1:1). */
 export function PipSkyView() {
@@ -16,6 +23,16 @@ export function PipSkyView() {
   useEffect(() => {
     if (selectedPassId !== null) open();
   }, [selectedPassId, open]);
+
+  // First-open placement: position at bottom-right with margins for the
+  // pass rail and playback dock. Sentinel coords (-1,-1) mean uninitialized.
+  useEffect(() => {
+    if (!isOpen) return;
+    if (position.x >= 0 && position.y >= 0) return;
+    const x = window.innerWidth - size.width - PIP_RIGHT_MARGIN_PX;
+    const y = window.innerHeight - size.height - PIP_BOTTOM_MARGIN_PX;
+    setPosition({ x: Math.max(0, x), y: Math.max(0, y) });
+  }, [isOpen, position.x, position.y, size.width, size.height, setPosition]);
 
   const [dragging, setDragging] = useState<null | { dx: number; dy: number }>(
     null,
