@@ -1,6 +1,9 @@
 import { useMemo } from "react";
 import { useCurrentPasses } from "@/hooks/use-current-passes";
 import { useObserverStore } from "@/store/observer";
+import { useDisplayTzStore } from "@/store/display-tz";
+import { useObserverTimezone } from "@/hooks/use-observer-timezone";
+import { formatTimeInTz } from "@/lib/format-time";
 import { tonightWindow } from "@/lib/sun";
 import type { PassItem } from "@/types/api";
 
@@ -18,6 +21,8 @@ export interface TonightSummary {
 export function useTonightSummary(now: Date = new Date()): TonightSummary | null {
   const observer = useObserverStore((s) => s.current);
   const { data } = useCurrentPasses();
+  const mode = useDisplayTzStore((s) => s.mode);
+  const { data: observerTz } = useObserverTimezone();
 
   return useMemo(() => {
     if (!data) return null;
@@ -45,9 +50,12 @@ export function useTonightSummary(now: Date = new Date()): TonightSummary | null
     );
 
     const fmt = (d: Date) =>
-      d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+      formatTimeInTz(d.toISOString(), mode, observerTz?.timezone ?? null, {
+        hour: "numeric",
+        minute: "2-digit",
+      });
     const windowLabel = `${fmt(sunset)} – ${fmt(nextSunrise)}`;
 
     return { count: passes.length, brightest, highest, passes, windowLabel };
-  }, [data, observer.lat, observer.lng, now]);
+  }, [data, observer.lat, observer.lng, now, mode, observerTz]);
 }

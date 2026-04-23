@@ -1,5 +1,8 @@
 import { useTrackAtCursor } from "@/hooks/use-track-at-cursor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useObserverTimezone } from "@/hooks/use-observer-timezone";
+import { useDisplayTzStore } from "@/store/display-tz";
+import { formatTimeInTz } from "@/lib/format-time";
 
 interface RowProps {
   label: string;
@@ -19,6 +22,8 @@ function Row({ label, value }: RowProps) {
 /** Sidebar card displaying live telemetry for the playback cursor position. */
 export function TelemetryRail() {
   const { sample, isLoading } = useTrackAtCursor();
+  const { data: observerTz } = useObserverTimezone();
+  const mode = useDisplayTzStore((s) => s.mode);
 
   if (!sample) {
     return (
@@ -41,7 +46,7 @@ export function TelemetryRail() {
       <CardContent className="space-y-1">
         <Row
           label="Time (local)"
-          value={new Date(sample.time).toLocaleTimeString()}
+          value={formatTimeInTz(sample.time, mode, observerTz?.timezone ?? null)}
         />
         <Row label="Altitude" value={`${sample.alt_km.toFixed(1)} km`} />
         <Row label="Range" value={`${sample.range_km.toFixed(0)} km`} />

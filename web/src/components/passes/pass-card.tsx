@@ -3,6 +3,9 @@ import type { PassItem } from "@/types/api";
 import { cn } from "@/lib/utils";
 import { formatDuration } from "@/lib/format";
 import { PassExportButton } from "@/components/passes/pass-export-button";
+import { useObserverTimezone } from "@/hooks/use-observer-timezone";
+import { useDisplayTzStore } from "@/store/display-tz";
+import { formatDateTimeInTz } from "@/lib/format-time";
 
 interface Props {
   pass: PassItem;
@@ -14,7 +17,9 @@ export function PassCard({ pass }: Props) {
   const select = useSelectionStore((s) => s.select);
   const isSelected = selectedId === pass.id;
 
-  const riseLocal = new Date(pass.rise.time).toLocaleString();
+  const { data: observerTz } = useObserverTimezone();
+  const mode = useDisplayTzStore((s) => s.mode);
+  const riseLocal = formatDateTimeInTz(pass.rise.time, mode, observerTz?.timezone ?? null);
   const mag =
     pass.max_magnitude != null ? `mag ${pass.max_magnitude.toFixed(1)}` : null;
 
