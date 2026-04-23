@@ -42,3 +42,6 @@ Thumbs.db
 web/node_modules/
 web/dist/
 web/.vite/
+
+# Planning artifacts (process scaffolding, not product docs)
+docs/superpowers/plans/
