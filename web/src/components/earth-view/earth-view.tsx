@@ -6,6 +6,11 @@ import { useTrackAtCursor } from "@/hooks/use-track-at-cursor";
 
 const TEXTURE_URL = "/earth-blue-marble.jpg";
 
+/** Pixel height of the Earth view hero card. Shared with EarthViewLoader
+ *  so the Suspense fallback matches the eventual content size and the card
+ *  doesn't jump. */
+export const EARTH_VIEW_HEIGHT_PX = 320;
+
 /** 3D earth view rendered with Three.js. Mounts a canvas inside a div,
  *  drives a requestAnimationFrame render loop, and updates mesh positions
  *  whenever the observer location or playback cursor sample changes.
@@ -103,7 +108,8 @@ export function EarthView() {
   return (
     <div
       ref={containerRef}
-      className="w-full h-[320px] rounded-card overflow-hidden border border-edge bg-bg"
+      className="w-full rounded-card overflow-hidden border border-edge bg-bg"
+      style={{ height: EARTH_VIEW_HEIGHT_PX }}
       role="region"
       aria-label="3D earth view"
     />
