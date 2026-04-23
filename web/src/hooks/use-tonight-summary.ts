@@ -24,8 +24,10 @@ export function useTonightSummary(now: Date = new Date()): TonightSummary | null
     const { sunset, nextSunrise } = tonightWindow(now, observer.lat, observer.lng);
 
     const passes = data.passes.filter((p) => {
-      const t = Date.parse(p.rise.time);
-      return t >= sunset.getTime() && t <= nextSunrise.getTime();
+      const rise = Date.parse(p.rise.time);
+      const set = Date.parse(p.set.time);
+      // Pass overlaps the tonight window if it ends after sunset AND starts before sunrise.
+      return set >= sunset.getTime() && rise <= nextSunrise.getTime();
     });
 
     if (passes.length === 0) return null;
