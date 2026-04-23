@@ -1,6 +1,7 @@
 import { useSelectionStore } from "@/store/selection";
 import type { PassItem } from "@/types/api";
 import { cn } from "@/lib/utils";
+import { formatDuration } from "@/lib/format";
 
 interface Props {
   pass: PassItem;
@@ -46,8 +47,3 @@ export function PassCard({ pass }: Props) {
   );
 }
 
-function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}m ${s.toString().padStart(2, "0")}s`;
-}

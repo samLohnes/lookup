@@ -2,17 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTimeRangeStore } from "@/store/time-range";
-
-function toLocalInput(iso: string): string {
-  // HTML datetime-local expects YYYY-MM-DDTHH:mm in local tz.
-  const d = new Date(iso);
-  const pad = (n: number) => n.toString().padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function fromLocalInput(local: string): string {
-  return new Date(local).toISOString();
-}
+import { toLocalInput, fromLocalInput } from "@/lib/datetime";
 
 export function TimeRangePicker() {
   const { fromUtc, toUtc, mode, setRange, setMode, applyPreset } =

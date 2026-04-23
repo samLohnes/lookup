@@ -1,5 +1,6 @@
 import { useSatelliteStore } from "@/store/satellite";
 import { useTleFreshness } from "@/hooks/use-tle-freshness";
+import { formatAge } from "@/lib/format";
 
 export function Header() {
   const query = useSatelliteStore((s) => s.query);
@@ -23,9 +24,3 @@ export function Header() {
   );
 }
 
-function formatAge(seconds: number): string {
-  if (seconds < 60) return `${Math.floor(seconds)} s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)} min`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)} h`;
-  return `${Math.floor(seconds / 86400)} d`;
-}
