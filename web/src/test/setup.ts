@@ -2,6 +2,15 @@ import "@testing-library/jest-dom/vitest";
 import { afterAll, afterEach, beforeAll } from "vitest";
 import { server } from "./msw/server";
 
+// cmdk uses ResizeObserver internally; jsdom doesn't provide it.
+if (typeof ResizeObserver === "undefined") {
+  global.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
 // Vitest's jsdom environment exposes localStorage as a plain `{}` without
 // Web Storage API methods. Install a minimal in-memory implementation so
 // Zustand's `persist` middleware can call getItem/setItem/removeItem.
