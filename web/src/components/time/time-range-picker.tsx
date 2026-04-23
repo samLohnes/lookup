@@ -5,8 +5,7 @@ import { useTimeRangeStore } from "@/store/time-range";
 import { toLocalInput, fromLocalInput } from "@/lib/datetime";
 
 export function TimeRangePicker() {
-  const { fromUtc, toUtc, mode, setRange, setMode, applyPreset } =
-    useTimeRangeStore();
+  const { fromUtc, toUtc, setRange, applyPreset } = useTimeRangeStore();
 
   return (
     <div className="space-y-3">
@@ -39,26 +38,6 @@ export function TimeRangePicker() {
         <Button variant="outline" size="sm" onClick={() => applyPreset(168)}>
           Next 7 d
         </Button>
-      </div>
-
-      <div>
-        <Label>Mode</Label>
-        <div className="flex gap-2">
-          <Button
-            variant={mode === "line-of-sight" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setMode("line-of-sight")}
-          >
-            Line-of-sight
-          </Button>
-          <Button
-            variant={mode === "naked-eye" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setMode("naked-eye")}
-          >
-            Naked-eye
-          </Button>
-        </div>
       </div>
     </div>
   );

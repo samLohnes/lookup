@@ -27,9 +27,4 @@ describe("TimeRangePicker", () => {
     expect(span).toBeLessThan(168 * 3600 * 1000 + 5000);
   });
 
-  it("mode toggle switches the store", async () => {
-    renderWithProviders(<TimeRangePicker />);
-    await userEvent.click(screen.getByRole("button", { name: /naked-eye/i }));
-    expect(useTimeRangeStore.getState().mode).toBe("naked-eye");
-  });
 });
