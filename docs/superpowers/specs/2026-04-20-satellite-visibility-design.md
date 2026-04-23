@@ -392,12 +392,38 @@ Architecture
 - React/Vite/TS `web/`
 - pytest suite with unit + golden + integration
 
-### 11.2 Deferred to v2+
+### 11.2 Deferred to v2+ (post-v0.5.0)
 
+**Shipped along the way** (originally deferred, now in-tree):
+- TLE cache with 24h auto-refresh (M2)
+- DEM-based terrain horizon (M2)
+- Starlink train clustering (M2)
+- FastAPI layer + all endpoints (M2)
+- React frontend with map picker, saved locations, pass list, timeline, sky view (M3)
+- 3D earth view, scrub playback, telemetry rail, ICS export, tonight summary (M4)
+- Timezone-aware display (post-M4 polish)
+
+**Still deferred** — not in v0.5.0:
+
+_Next-milestone candidates (Direction B features — incremental, well-defined):_
+- Magnitude filter UI (engine supports it already via `/passes min_magnitude`)
+- Ground-track line in 3D earth view (scene factory creates the mesh; needs population)
+- Camera drag override in 3D (auto-orbit only today)
 - User-drawn horizon obstructions (paint a tree line on the sky dome)
-- Magnitude filter UI (engine already supports it)
-- Desktop OS notifications (would add background daemon)
-- Tauri / Electron packaging
+
+_Cinematic-polish milestone candidates (aesthetic transformation, not features):_
+- Atmosphere shader on the 3D earth (glow + day/night terminator)
+- City lights on the night side
+- Cloud layer
+- Starfield + nebula backdrop on the sky view
+- Motion design layer (`framer-motion` or CSS transitions on every state change)
+- Custom scrubber with hover preview
+- Typography system (paired display serif + data sans, tabular figures)
+- Hero-first layout option (3D earth fills viewport with panels overlaid)
+
+_Infrastructure / packaging (whenever it's time):_
+- Desktop OS notifications for upcoming passes (would add a background daemon)
+- Tauri/Electron packaging
 - CLI wrapping the engine
 - "Work offline" toggle
 - Visual regression tests for 3D rendering
@@ -438,6 +464,20 @@ Each milestone is independently usable and testable.
 - One-command launcher script
 - README with setup + usage
 - `docs/accuracy-log.md` seeded with 3 verified ISS passes + 1 Starlink train
+
+### 12.6 Milestone tags in git
+
+| Tag | Status | Scope |
+|---|---|---|
+| `m1-engine` | Shipped | Pure Python engine (SGP4, visibility, catalog, golden test) |
+| `m2-terrain-api` | Shipped | Celestrak client, DEM, horizon, trains, FastAPI, all endpoints |
+| `m3-frontend` | Shipped | React + Vite scaffold, sky view, map picker, pass list, timeline |
+| `m4-3d-hero` | Shipped | 3D earth, scrubbable playback, telemetry, ICS, tonight card |
+| `m5-release` | Shipped (= v0.5.0) | Lazy-load Three.js, accuracy log, README walkthrough, polish |
+
+Planned, not yet scheduled:
+- **Cinematic-polish milestone** — the aesthetic transformation listed in §11.2.
+- **Deferred-features milestone** — the Direction B items in §11.2.
 
 ---
 
