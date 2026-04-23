@@ -5,7 +5,6 @@ import { HeroPanel } from "@/components/hero/hero-panel";
 // Stub EarthView so the test doesn't try to spin up Three.js in jsdom.
 vi.mock("@/components/earth-view/earth-view", () => ({
   EarthView: () => <div data-testid="earth-stub">EarthView</div>,
-  EARTH_VIEW_HEIGHT_PX: 320,
 }));
 
 describe("HeroPanel", () => {
