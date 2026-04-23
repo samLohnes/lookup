@@ -67,6 +67,10 @@ web-test:
 web-test-watch:
     cd web && npm run test
 
+# Frontend coverage report (v8 over all src files).
+web-cov:
+    cd web && npx vitest run --coverage
+
 # Frontend ESLint.
 web-lint:
     cd web && npm run lint

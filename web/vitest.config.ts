@@ -13,5 +13,17 @@ export default defineConfig({
     environmentOptions: {
       jsdom: { url: "http://localhost:5173" },
     },
+    coverage: {
+      provider: "v8",
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: [
+        "src/main.tsx",
+        "src/vite-env.d.ts",
+        "src/test/**",
+        "src/**/*.test.{ts,tsx}",
+        "src/components/ui/**", // shadcn primitives — out-of-tree style, not our logic
+      ],
+      reporter: ["text", "html"],
+    },
   },
 });
