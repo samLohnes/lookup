@@ -2,11 +2,13 @@ import { useSelectionStore } from "@/store/selection";
 import type { PassItem } from "@/types/api";
 import { cn } from "@/lib/utils";
 import { formatDuration } from "@/lib/format";
+import { PassExportButton } from "@/components/passes/pass-export-button";
 
 interface Props {
   pass: PassItem;
 }
 
+/** A clickable card displaying key info about a single satellite pass. */
 export function PassCard({ pass }: Props) {
   const selectedId = useSelectionStore((s) => s.selectedPassId);
   const select = useSelectionStore((s) => s.select);
@@ -17,10 +19,19 @@ export function PassCard({ pass }: Props) {
     pass.max_magnitude != null ? `mag ${pass.max_magnitude.toFixed(1)}` : null;
 
   return (
-    <button
+    <div
       onClick={() => select(pass.id)}
+      role="button"
+      tabIndex={0}
+      aria-label={pass.name}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          select(pass.id);
+        }
+      }}
       className={cn(
-        "w-full text-left p-3 rounded-card border transition-colors",
+        "block w-full text-left p-3 rounded-card border transition-colors cursor-pointer",
         isSelected
           ? "border-satellite bg-satellite/5"
           : "border-edge hover:bg-edge",
@@ -43,7 +54,9 @@ export function PassCard({ pass }: Props) {
           {pass.member_count} objects
         </div>
       )}
-    </button>
+      <div className="mt-2 flex justify-end">
+        <PassExportButton pass={pass} />
+      </div>
+    </div>
   );
 }
-

@@ -56,14 +56,14 @@ describe("PassCard", () => {
 
   it("clicking sets the pass as selected in the store", async () => {
     renderWithProviders(<PassCard pass={SINGLE} />);
-    await userEvent.click(screen.getByRole("button"));
+    await userEvent.click(screen.getByRole("button", { name: "ISS (ZARYA)" }));
     expect(useSelectionStore.getState().selectedPassId).toBe(SINGLE.id);
   });
 
   it("highlights when its id matches the store's selectedPassId", () => {
     useSelectionStore.setState({ selectedPassId: SINGLE.id });
     renderWithProviders(<PassCard pass={SINGLE} />);
-    const button = screen.getByRole("button");
+    const button = screen.getByRole("button", { name: "ISS (ZARYA)" });
     // The selected variant has the satellite border color.
     expect(button.className).toContain("border-satellite");
   });
