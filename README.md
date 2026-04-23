@@ -1,173 +1,180 @@
 # Satellite Visibility
 
-Local, research-grade satellite pass prediction and visualization.
+Local, research-grade satellite pass prediction with a cinematic-ish frontend.
+Runs entirely on your machine: skyfield + FastAPI backend, React + Three.js
+frontend, zero cloud dependencies beyond free data sources (Celestrak TLEs,
+OpenTopography DEM tiles, OSM map tiles).
 
-**Status:** M1 shipped — pure Python engine (see `m1-engine` tag). M2+ will add terrain, API layer, and frontend.
+**Version:** v0.5.0 — functionally complete v1 baseline. Cinematic polish
+(atmosphere shader, motion design, starfield, richer typography) and a few
+deferred feature items (magnitude filter UI, ground-track line, user-drawn
+horizon) are planned as follow-on milestones.
 
-See [design spec](docs/superpowers/specs/2026-04-20-satellite-visibility-design.md) and [M1 plan](docs/superpowers/plans/2026-04-20-m1-engine.md) for details.
+![Earth view with playback](docs/screenshots/earth-view.png)
 
-## Development
+![Sky view with horizon mask and pass arc](docs/screenshots/sky-view.png)
+
+---
+
+## What this does
+
+Pick an observer location (map pin or address), pick a satellite (ISS,
+Hubble, Starlink group, NORAD ID, or fuzzy-search anything), pick a time
+range, and get:
+
+- **A pass list** with rise/peak/set times, peak elevation, and magnitude.
+- **A timeline strip** showing every pass in the window at a glance.
+- **A sky view** — alt-azimuth dome with terrain silhouette, predicted pass
+  arc, and a playback cursor you can scrub through the arc.
+- **A 3D earth view** — Blue Marble globe with observer pin and satellite
+  marker, swappable with the sky view as the right-column hero.
+- **Live telemetry** — altitude, range, velocity, az/el, magnitude, sunlit,
+  observer-dark — bound to the playback cursor at 1×, 10×, or 60× speed.
+- **ICS calendar export** per pass.
+- **A tonight summary card** highlighting the brightest and highest passes
+  between local sunset and next sunrise.
+- **Timezone awareness** — toggle between client / observer / UTC display
+  with a warning if the two timezones differ.
+
+The engine (`core/`) uses `skyfield` for SGP4 propagation and is accurate to
+±1 s / ±0.1° against Heavens-Above (see [`docs/accuracy-log.md`](docs/accuracy-log.md)).
+
+## Quick start
 
 ```bash
+# backend
 uv venv
 source .venv/bin/activate
 uv pip install -e ".[dev]"
-pytest
+
+# frontend
+just web-install
 ```
 
-## Quick demo
+Set your free OpenTopography API key (needed for terrain horizon masks):
 
 ```bash
-python scripts/demo.py                                           # ISS over NYC, 24h, line-of-sight
-python scripts/demo.py --lat 51.5 --lng -0.12 --name London      # custom location
-python scripts/demo.py --mode naked-eye                          # only visually-visible passes
+cp .env.example .env
+# edit .env to add SATVIS_OPENTOPOGRAPHY_API_KEY=<your-key>
+# get a key at https://portal.opentopography.org/
 ```
 
-## Run the local API
+Then in two shells:
 
 ```bash
-just serve
-# or: ./scripts/serve.sh
-```
-
-Binds on `127.0.0.1:8765` and exposes:
-
-- `POST /passes` — predicted passes (single satellite or group, with train clustering)
-- `POST /sky-track` — dense per-second samples for animating a pass
-- `GET /horizon?lat=…&lng=…` — 360° terrain horizon mask
-- `GET /tle-freshness?query=…` — how old the cached TLEs are
-- `GET /docs` — interactive OpenAPI UI
-- `GET /health` — liveness probe
-
-Quick test (in another terminal with the server running):
-
-```bash
-curl -s -X POST http://127.0.0.1:8765/passes \
-  -H 'content-type: application/json' \
-  -d '{
-    "lat": 40.7128, "lng": -74.0060, "elevation_m": 10,
-    "query": "ISS",
-    "from_utc": "2026-05-01T00:00:00Z",
-    "to_utc": "2026-05-08T00:00:00Z",
-    "mode": "line-of-sight"
-  }' | python -m json.tool | head -40
-```
-
-### Group queries auto-filter by default
-
-When you query a satellite group (e.g. `"query": "starlink"`), `/passes` applies
-two default filters to keep the response small:
-
-- peak elevation ≥ **30°**
-- in naked-eye mode only: magnitude ≤ **+4**
-
-Opt out with `"apply_group_defaults": false`, or override either floor with
-`"min_peak_elevation_deg"` / `"min_magnitude"`. Single-satellite queries are
-never auto-filtered.
-
-### OpenTopography API key
-
-Terrain-based horizon masks require a free OpenTopography API key. Register at
-https://portal.opentopography.org/ and export:
-
-```bash
-export SATVIS_OPENTOPOGRAPHY_API_KEY=your-key-here
-```
-
-Without a key, `/passes` and `/horizon` will return HTTP 500 with a clear
-error message.
-
-## Run the frontend
-
-In one shell, start the API:
-
-```bash
-just serve
-```
-
-In another shell, start the Vite dev server:
-
-```bash
-just web-install   # first time only
-just web
+just serve   # shell 1: API on http://127.0.0.1:8765
+just web     # shell 2: frontend on http://localhost:5173
 ```
 
 Open `http://localhost:5173/`.
 
-The frontend proxies `/api/*` to the local API at `127.0.0.1:8765`, so CORS
-is a non-issue in dev. Observer location and saved spots persist via
-`localStorage`. Satellite search uses `GET /catalog/search`; passes come
-from `POST /passes`; the sky view mounts `GET /horizon` + `POST /sky-track`
-on pass selection.
+## Your first pass
 
-### Production build
+1. The observer defaults to Brooklyn, NY. Click on the map to move the pin,
+   or type an address in the search box.
+2. The satellite defaults to ISS. Click the dropdown to search for others
+   (`hubble`, `starlink`, `25544`, etc.).
+3. Pick a time window — the presets (`Next 24 h`, `Next 3 d`, `Next 7 d`)
+   are fastest.
+4. Choose **Line-of-sight** for radio/tracking (any pass above the horizon)
+   or **Naked-eye** for visible passes only (sunlit + observer in darkness).
+5. Click any pass in the list. The sky view and 3D earth render the selected
+   pass's arc. Hit ▶ Play to scrub through it in real time.
+
+## Concepts
+
+### Observer vs client
+
+The **observer** is the geographic point you picked (lat/lng). The **client**
+is you — the browser/machine running the app. They may or may not share a
+timezone. The header's timezone toggle (`Client | Observer | UTC`) controls
+how all times display; there's a warning banner in the observer panel when
+the two timezones differ.
+
+### Visibility modes
+
+- **Line-of-sight:** any pass with elevation above the horizon (accounting
+  for terrain). Useful for radio operators and anyone who doesn't care about
+  sunlight.
+- **Naked-eye:** passes where the satellite is sunlit AND the observer is in
+  darkness. The only ones you can actually see with your eyes.
+
+### Group queries
+
+Querying a group like `starlink` or `stations` would return hundreds of
+passes at once. By default `/passes` filters a group to "notable passes only"
+(peak elevation ≥ 30°, magnitude ≤ +4 in naked-eye mode). Individual
+satellite queries are never auto-filtered.
+
+## Accuracy
+
+The golden test (`tests/golden/test_iss_nyc.py`) locks the engine's output
+against a frozen baseline to ±1 s / ±0.1°. Results are recorded quarterly
+in [`docs/accuracy-log.md`](docs/accuracy-log.md) against Heavens-Above.
+
+To run a fresh cross-check:
 
 ```bash
-just web-build
+just verify --markdown   # emits markdown table rows for the accuracy log
 ```
 
-Writes `web/dist/`. Serve it however you like (M5+ may bundle this behind
-the FastAPI app or via a small static server).
+Open the printed Heavens-Above URL, compare passes, paste the rows into the
+log with the observed deltas filled in.
 
-### Frontend tests
+## Commands
 
-```bash
-just web-test        # one-shot
-just web-test-watch  # watch mode
-just web-lint
-```
-
-### What's new in M4
-
-- **Scrubbable timeline** — select any pass, hit Play, watch the satellite trace its arc in real time (1×, 10×, or 60× speed)
-- **Telemetry rail** — live altitude / range / az/el / velocity / magnitude / sunlit / dark, all bound to the cursor
-- **3D earth view** — toggle the right-column hero between the alt-az sky dome and a Three.js earth with observer pin + satellite marker
-- **ICS calendar export** — every pass card has a `📅 .ics` button that downloads a calendar event for the rise/set window
-- **Tonight summary** — when there are passes in the local sunset → next sunrise window, a card highlights the brightest and the highest
-
-### Earth-view notes
-
-- Texture: NASA Blue Marble (`web/public/earth-blue-marble.jpg`, ~1.5 MB, public domain). If you swap textures, keep the equirectangular projection.
-- Three.js bundle adds ~600 KB to the production build. M5 will likely lazy-load this so the sky-only path stays small.
-
-## Accuracy — action required before making claims
-
-The golden test (`tests/golden/test_iss_nyc.py`) currently functions as a **regression guard only**, not an accuracy proof. It asserts that the engine reproduces a frozen baseline within ±1 s / ±0.1°, but the baseline itself was generated by the engine. Before claiming "research-grade accuracy" to anyone, one human cross-check against an independent source is required.
-
-### The ~5-minute human verification
-
-Run the helper script:
-
-```bash
-python scripts/verify_accuracy.py
-```
-
-It prints, in one shot:
-- The fixture's TLE epoch and the 24-hour verification window
-- The observer coordinates (NYC)
-- A pre-built **Heavens-Above URL** to open
-- All predicted passes, numbered, with rise/peak/set times and az/el (plus compass labels like `NNE`, `SSW`)
-- The tolerance reminder (±1 s, ±0.1°)
-
-Open the URL in a browser, match the passes one-by-one, and eyeball the numbers. Then **record the result in [docs/accuracy-log.md](docs/accuracy-log.md):**
-
-- Within tolerance → update the M1 seed row's "Source of truth" and "Result" to reflect actual Heavens-Above verification.
-- Out of tolerance → do NOT silently update. Open an issue; investigate before any downstream work.
-
-After this one-time verification, the golden test becomes a true accuracy regression test — any engine change that breaks it is a real correctness bug.
-
-### Ongoing accuracy cadence
-
-Per [docs/accuracy-log.md](docs/accuracy-log.md), the process is quarterly: pick 3 fresh ISS passes + 1 Starlink train (once M2 adds train clustering), cross-check against Heavens-Above, record deltas. Keeps us honest across TLE refreshes and skyfield version bumps.
+| Command | What it does |
+|---|---|
+| `just test` | Python test suite |
+| `just web-test` | Frontend test suite (vitest) |
+| `just lint` / `just web-lint` | Ruff / ESLint |
+| `just cov` / `just web-cov` | Coverage reports |
+| `just serve` | Start the API |
+| `just web` | Start the Vite dev server |
+| `just web-build` | Production frontend build |
+| `just demo` | Python CLI demo (ISS over NYC by default) |
+| `just verify` | Accuracy verification helper |
 
 ## Project layout
 
 ```
-core/            Pure Python engine (zero web deps)
-  orbital/       SGP4 pass prediction + trajectory sampling
-  visibility/    Darkness / sunlit / magnitude / filtering
-  catalog/       TLE parsing + fuzzy satellite search
-tests/           Unit + golden + shared fixtures
-scripts/demo.py  CLI that exercises the whole engine
-docs/            Spec, plans, accuracy log
+core/                Pure Python engine (zero web deps)
+  orbital/           SGP4 pass prediction + trajectory sampling
+  visibility/        Darkness / sunlit / magnitude / filtering
+  catalog/           TLE parsing + fuzzy satellite search + Celestrak client
+  terrain/           OpenTopography DEM fetch + horizon mask compute
+  trains/            Starlink train clustering heuristic
+api/                 FastAPI app wrapping core/
+  routes/            /passes, /sky-track, /horizon, /tle-freshness,
+                     /catalog/search, /geo/timezone
+  schemas/           Pydantic request + response models
+web/                 React + Vite frontend
+  src/
+    components/      UI (layout, observer, satellite, passes, sky-view,
+                     earth-view, hero, playback, telemetry, ui primitives)
+    hooks/           TanStack Query wrappers + composed hooks
+    store/           Zustand stores (observer, satellite, time-range,
+                     selection, playback, display-tz)
+    lib/             Pure helpers (api, interpolation, ics, geo3d, sun,
+                     format-time)
+tests/               Python: unit + golden + integration + api_unit
+scripts/             demo.py, verify_accuracy.py, serve.sh
+docs/
+  superpowers/
+    specs/           The design spec this project was built from
+  accuracy-log.md    Engine-vs-Heavens-Above cross-check ledger
+  screenshots/       README images
 ```
+
+## What's next
+
+- **Cinematic polish** — atmosphere shader on the 3D earth, day/night
+  shading + city lights, cloud layer, starfield on the sky view, motion
+  design throughout, custom scrubber, typography system.
+- **Deferred features** — magnitude filter UI, ground-track line in 3D,
+  camera drag override, user-drawn horizon obstructions.
+- **Optional packaging** — Tauri/Electron desktop binary, CLI wrapping the
+  engine, OS notifications for upcoming passes.
+
+See [`docs/superpowers/specs/2026-04-20-satellite-visibility-design.md`](docs/superpowers/specs/2026-04-20-satellite-visibility-design.md)
+for the full design spec and milestone history.
