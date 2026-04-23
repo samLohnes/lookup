@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import { useObserverStore } from "@/store/observer";
+import { useDraftInputsStore } from "@/store/draft-inputs";
 
 // NOTE: not unit-tested — Leaflet's DOM coupling makes RTL testing brittle.
 // Verified by manual smoke + the integration with the observer store
@@ -25,7 +26,6 @@ export function MapPicker() {
   const markerRef = useRef<L.Marker | null>(null);
 
   const current = useObserverStore((s) => s.current);
-  const setCurrent = useObserverStore((s) => s.setCurrent);
 
   // Mount once.
   useEffect(() => {
@@ -54,14 +54,25 @@ export function MapPicker() {
       icon: MARKER_ICON,
     }).addTo(map);
 
+    // Writes land on the draft store — the committed observer only moves on Run.
+    const writeDraftLocation = (lat: number, lng: number) => {
+      const draftObs = useDraftInputsStore.getState().draft.observer;
+      useDraftInputsStore.getState().setDraftObserver({
+        ...draftObs,
+        lat,
+        lng,
+        name: "Map pick",
+      });
+    };
+
     map.on("click", (e: L.LeafletMouseEvent) => {
       marker.setLatLng(e.latlng);
-      setCurrent({ lat: e.latlng.lat, lng: e.latlng.lng, name: "Map pick" });
+      writeDraftLocation(e.latlng.lat, e.latlng.lng);
     });
 
     marker.on("dragend", () => {
       const ll = marker.getLatLng();
-      setCurrent({ lat: ll.lat, lng: ll.lng, name: "Map pick" });
+      writeDraftLocation(ll.lat, ll.lng);
     });
 
     mapRef.current = map;

@@ -19,12 +19,23 @@ function plusHoursIso(hours: number): string {
   return new Date(Date.now() + hours * 3600 * 1000).toISOString();
 }
 
+/**
+ * Compute the `{fromUtc, toUtc}` window for a preset duration (in hours)
+ * starting from now. Shared between the committed-store `applyPreset` action
+ * and the draft-input write path so both produce identical windows.
+ */
+export function computePresetWindow(hours: number): {
+  fromUtc: string;
+  toUtc: string;
+} {
+  return { fromUtc: nowIso(), toUtc: plusHoursIso(hours) };
+}
+
 export const useTimeRangeStore = create<TimeRangeState>((set) => ({
   fromUtc: nowIso(),
   toUtc: plusHoursIso(24),
   mode: "line-of-sight",
   setRange: (fromUtc, toUtc) => set({ fromUtc, toUtc }),
   setMode: (m) => set({ mode: m }),
-  applyPreset: (hours) =>
-    set({ fromUtc: nowIso(), toUtc: plusHoursIso(hours) }),
+  applyPreset: (hours) => set(computePresetWindow(hours)),
 }));

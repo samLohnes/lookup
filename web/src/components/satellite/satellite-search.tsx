@@ -11,13 +11,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useSatelliteStore } from "@/store/satellite";
+import { useDraftInputsStore } from "@/store/draft-inputs";
 import { useCatalogSearch } from "@/hooks/use-catalog-search";
 
 export function SatelliteSearch() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const query = useSatelliteStore((s) => s.query);
-  const setQuery = useSatelliteStore((s) => s.setQuery);
+  const setDraftSatellite = useDraftInputsStore((s) => s.setDraftSatellite);
   const { data: hits, isFetching } = useCatalogSearch(input);
 
   return (
@@ -53,7 +54,7 @@ export function SatelliteSearch() {
                       key={`${hit.match_type}-${hit.display_name}`}
                       value={hit.display_name}
                       onSelect={() => {
-                        setQuery(hit.display_name);
+                        setDraftSatellite({ query: hit.display_name });
                         setOpen(false);
                       }}
                     >
