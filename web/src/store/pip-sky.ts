@@ -17,7 +17,10 @@ type PipSkyState = {
 
 export const usePipSkyStore = create<PipSkyState>()((set) => ({
   isOpen: false,
-  position: { x: 100, y: 100 },
+  // Sentinel — replaced on first open with a viewport-aware bottom-right
+  // placement (see PipSkyView). Using negative coords avoids accidentally
+  // rendering at a real on-screen position before initialization.
+  position: { x: -1, y: -1 },
   size: { width: 300, height: 300 },
   open: () => set({ isOpen: true }),
   close: () => set({ isOpen: false }),
