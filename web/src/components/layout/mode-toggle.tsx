@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAppModeStore, type AppMode } from "@/store/app-mode";
+import { useWindowWidth } from "@/hooks/use-window-width";
 import {
   Popover,
   PopoverContent,
@@ -16,6 +17,7 @@ export function ModeToggle() {
   const mode = useAppModeStore((s) => s.mode);
   const setMode = useAppModeStore((s) => s.setMode);
   const [open, setOpen] = useState(false);
+  const narrow = useWindowWidth() < 900;
 
   const choose = (m: AppMode) => {
     setMode(m);
@@ -27,7 +29,12 @@ export function ModeToggle() {
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="px-3 py-1.5 text-xs rounded-md bg-bg-raised/85 border border-edge/40 text-fg-muted backdrop-blur-sm hover:bg-bg-raised"
+          disabled={narrow}
+          title={narrow ? "Cinematic mode is desktop-only" : undefined}
+          className={
+            "px-3 py-1.5 text-xs rounded-md bg-bg-raised/85 border border-edge/40 text-fg-muted backdrop-blur-sm hover:bg-bg-raised " +
+            (narrow ? "opacity-50 cursor-not-allowed" : "")
+          }
         >
           {LABELS[mode]} ▾
         </button>

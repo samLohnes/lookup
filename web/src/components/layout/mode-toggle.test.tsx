@@ -21,4 +21,25 @@ describe("ModeToggle", () => {
     fireEvent.click(researchItem);
     expect(useAppModeStore.getState().mode).toBe("research");
   });
+
+  it("is disabled when viewport is narrow (< 900px)", () => {
+    // Set jsdom viewport narrow before render.
+    Object.defineProperty(window, "innerWidth", {
+      value: 500,
+      writable: true,
+      configurable: true,
+    });
+    window.dispatchEvent(new Event("resize"));
+    render(<ModeToggle />);
+    const trigger = screen.getByRole("button", { name: /Cinematic/i });
+    expect(trigger).toBeDisabled();
+    expect(trigger.getAttribute("title")).toMatch(/desktop-only/i);
+    // Restore to wide for subsequent tests.
+    Object.defineProperty(window, "innerWidth", {
+      value: 1024,
+      writable: true,
+      configurable: true,
+    });
+    window.dispatchEvent(new Event("resize"));
+  });
 });
