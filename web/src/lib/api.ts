@@ -1,5 +1,6 @@
 import type {
   CatalogHitResponse,
+  GeoTimezoneResponse,
   HorizonResponse,
   PassesRequest,
   PassesResponseBody,
@@ -70,5 +71,10 @@ export const api = {
   tleFreshness: (query: string) =>
     request<TLEFreshnessResponse[]>(
       `/tle-freshness?query=${encodeURIComponent(query)}`,
+    ),
+
+  geoTimezone: (lat: number, lng: number) =>
+    request<GeoTimezoneResponse>(
+      `/geo/timezone?lat=${lat}&lng=${lng}`,
     ),
 };
