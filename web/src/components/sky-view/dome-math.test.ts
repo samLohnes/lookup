@@ -16,9 +16,11 @@ describe("altAzToXy", () => {
     expect(y).toBeCloseTo(DOME_CENTER - DOME_RADIUS, 1);
   });
 
-  it("horizon east (az=90, el=0) is to the right of center on the circle", () => {
+  it("horizon east (az=90, el=0) is to the LEFT of center — sky-chart convention", () => {
+    // Looking-up sky charts mirror a ground map east-west: east renders on
+    // the left (planisphere / Heavens-Above / Stellarium standard).
     const { x, y } = altAzToXy(90, 0);
-    expect(x).toBeCloseTo(DOME_CENTER + DOME_RADIUS, 1);
+    expect(x).toBeCloseTo(DOME_CENTER - DOME_RADIUS, 1);
     expect(y).toBeCloseTo(DOME_CENTER, 1);
   });
 
@@ -28,9 +30,10 @@ describe("altAzToXy", () => {
     expect(y).toBeCloseTo(DOME_CENTER + DOME_RADIUS, 1);
   });
 
-  it("horizon west (az=270, el=0) is to the left of center on the circle", () => {
+  it("horizon west (az=270, el=0) is to the RIGHT of center — sky-chart convention", () => {
+    // West ends up on the right because east is on the left; see east test.
     const { x, y } = altAzToXy(270, 0);
-    expect(x).toBeCloseTo(DOME_CENTER - DOME_RADIUS, 1);
+    expect(x).toBeCloseTo(DOME_CENTER + DOME_RADIUS, 1);
     expect(y).toBeCloseTo(DOME_CENTER, 1);
   });
 
