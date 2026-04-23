@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useCurrentPasses } from "@/hooks/use-current-passes";
 import { useSelectionStore } from "@/store/selection";
 import { useTimeRangeStore } from "@/store/time-range";
+import { computeTimelineLayout } from "@/components/passes/timeline-layout";
 
 const STRIP_HEIGHT = 48;
 
@@ -11,38 +12,10 @@ export function TimelineStrip() {
   const select = useSelectionStore((s) => s.select);
   const { fromUtc, toUtc } = useTimeRangeStore();
 
-  const { bars, dayTicks } = useMemo(() => {
-    if (!data || data.passes.length === 0) return { bars: [], dayTicks: [] };
-    const start = new Date(fromUtc).getTime();
-    const end = new Date(toUtc).getTime();
-    const span = Math.max(end - start, 1);
-
-    const bars = data.passes.map((p) => {
-      const t0 = new Date(p.rise.time).getTime();
-      const t1 = new Date(p.set.time).getTime();
-      // Clamp to [0, 100] so passes that started before fromUtc or end
-      // after toUtc still render inside the strip rather than overflowing.
-      const rawLeft = ((t0 - start) / span) * 100;
-      const rawRight = ((t1 - start) / span) * 100;
-      const leftPct = Math.min(Math.max(rawLeft, 0), 100);
-      const rightPct = Math.min(Math.max(rawRight, 0), 100);
-      return {
-        id: p.id,
-        leftPct,
-        widthPct: Math.max(rightPct - leftPct, 0.4),
-      };
-    });
-
-    const dayTicks: number[] = [];
-    const firstDayBoundary = new Date(start);
-    firstDayBoundary.setUTCHours(0, 0, 0, 0);
-    firstDayBoundary.setUTCDate(firstDayBoundary.getUTCDate() + 1);
-    for (let t = firstDayBoundary.getTime(); t < end; t += 86400 * 1000) {
-      dayTicks.push(((t - start) / span) * 100);
-    }
-
-    return { bars, dayTicks };
-  }, [data, fromUtc, toUtc]);
+  const { bars, dayTicks } = useMemo(
+    () => computeTimelineLayout(data?.passes ?? [], fromUtc, toUtc),
+    [data, fromUtc, toUtc],
+  );
 
   if (!data || data.passes.length === 0) return null;
 
