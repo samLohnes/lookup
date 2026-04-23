@@ -11,7 +11,7 @@ export function TimeRangePicker() {
   return (
     <div className="space-y-3">
       <div>
-        <Label htmlFor="from-utc">From (local)</Label>
+        <Label htmlFor="from-utc">From (your time)</Label>
         <Input
           id="from-utc"
           type="datetime-local"
@@ -20,7 +20,7 @@ export function TimeRangePicker() {
         />
       </div>
       <div>
-        <Label htmlFor="to-utc">To (local)</Label>
+        <Label htmlFor="to-utc">To (your time)</Label>
         <Input
           id="to-utc"
           type="datetime-local"
