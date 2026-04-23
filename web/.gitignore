@@ -3,3 +3,7 @@ dist
 .vite
 .vite-cache
 *.local
+
+# Generated artifacts
+coverage/
+*.tsbuildinfo
