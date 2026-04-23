@@ -45,3 +45,6 @@ web/.vite/
 
 # Planning artifacts (process scaffolding, not product docs)
 docs/superpowers/plans/
+
+# Superpowers brainstorming session artifacts
+.superpowers/
