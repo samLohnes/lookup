@@ -7,8 +7,6 @@ import { useTrackAtCursor } from "@/hooks/use-track-at-cursor";
 
 export { EARTH_VIEW_HEIGHT_PX } from "./constants";
 
-const TEXTURE_URL = "/earth-blue-marble.jpg";
-
 /** 3D earth view rendered with Three.js. Mounts a canvas inside a div,
  *  drives a requestAnimationFrame render loop, and updates mesh positions
  *  whenever the observer location or playback cursor sample changes.
@@ -29,38 +27,49 @@ export function EarthView() {
     const height = Math.floor(rect.height || 320);
     containerRef.current.appendChild(canvas);
 
-    const handles = createScene({
-      canvas,
-      width,
-      height,
-      textureUrl: TEXTURE_URL,
-    });
-    handlesRef.current = handles;
-
-    // StrictMode-safe initial placement. Without this, the three reactive
-    // effects below miss their first window because handlesRef is null
-    // during the double-mount's brief null phase.
-    const initialObs = latLngAltToVec3(observer.lat, observer.lng, 0);
-    handles.observerPin.position.set(initialObs.x, initialObs.y, initialObs.z);
-    const initialLen = Math.hypot(initialObs.x, initialObs.y, initialObs.z);
-    const initialCameraDistance = 3;
-    handles.camera.position.set(
-      (initialObs.x / initialLen) * initialCameraDistance,
-      (initialObs.y / initialLen) * initialCameraDistance,
-      (initialObs.z / initialLen) * initialCameraDistance,
-    );
-    handles.camera.lookAt(0, 0, 0);
-
+    let cancelled = false;
     let raf = 0;
-    const renderLoop = () => {
-      handles.renderer.render(handles.scene, handles.camera);
+    let localHandles: SceneHandles | null = null;
+
+    createScene({ canvas, width, height }).then((handles) => {
+      if (cancelled) {
+        handles.dispose();
+        return;
+      }
+      localHandles = handles;
+      handlesRef.current = handles;
+
+      // StrictMode-safe initial placement. Without this, the three reactive
+      // effects below miss their first window because handlesRef is null
+      // during the double-mount's brief null phase.
+      const initialObs = latLngAltToVec3(observer.lat, observer.lng, 0);
+      handles.observerPin.position.set(
+        initialObs.x,
+        initialObs.y,
+        initialObs.z,
+      );
+      const initialLen = Math.hypot(initialObs.x, initialObs.y, initialObs.z);
+      const initialCameraDistance = 3;
+      handles.camera.position.set(
+        (initialObs.x / initialLen) * initialCameraDistance,
+        (initialObs.y / initialLen) * initialCameraDistance,
+        (initialObs.z / initialLen) * initialCameraDistance,
+      );
+      handles.camera.lookAt(0, 0, 0);
+
+      const renderLoop = () => {
+        handles.renderer.render(handles.scene, handles.camera);
+        raf = requestAnimationFrame(renderLoop);
+      };
       raf = requestAnimationFrame(renderLoop);
-    };
-    raf = requestAnimationFrame(renderLoop);
+    });
 
     return () => {
+      cancelled = true;
       cancelAnimationFrame(raf);
-      handles.dispose();
+      if (localHandles) {
+        localHandles.dispose();
+      }
       canvas.remove();
       handlesRef.current = null;
     };
