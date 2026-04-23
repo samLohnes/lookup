@@ -34,6 +34,20 @@ export function EarthView() {
     });
     handlesRef.current = handles;
 
+    // StrictMode-safe initial placement. Without this, the three reactive
+    // effects below miss their first window because handlesRef is null
+    // during the double-mount's brief null phase.
+    const initialObs = latLngAltToVec3(observer.lat, observer.lng, 0);
+    handles.observerPin.position.set(initialObs.x, initialObs.y, initialObs.z);
+    const initialLen = Math.hypot(initialObs.x, initialObs.y, initialObs.z);
+    const initialCameraDistance = 3;
+    handles.camera.position.set(
+      (initialObs.x / initialLen) * initialCameraDistance,
+      (initialObs.y / initialLen) * initialCameraDistance,
+      (initialObs.z / initialLen) * initialCameraDistance,
+    );
+    handles.camera.lookAt(0, 0, 0);
+
     let raf = 0;
     const renderLoop = () => {
       handles.renderer.render(handles.scene, handles.camera);
@@ -47,6 +61,7 @@ export function EarthView() {
       canvas.remove();
       handlesRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Move the observer pin whenever the observer changes.
