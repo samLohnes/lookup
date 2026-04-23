@@ -1,6 +1,7 @@
 import { AddressSearch } from "@/components/observer/address-search";
 import { MapPicker } from "@/components/observer/map-picker";
 import { SavedLocations } from "@/components/observer/saved-locations";
+import { TzWarning } from "@/components/observer/tz-warning";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useObserverStore } from "@/store/observer";
 
@@ -16,6 +17,7 @@ export function ObserverPanel() {
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
+        <TzWarning />
         <AddressSearch />
         <MapPicker />
         <SavedLocations />
