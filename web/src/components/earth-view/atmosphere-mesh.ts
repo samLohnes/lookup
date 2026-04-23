@@ -14,7 +14,7 @@ export function createAtmosphereMesh(earthRadius: number): AtmosphereMeshHandle 
   const material = new THREE.ShaderMaterial({
     uniforms: {
       glowColor: { value: new THREE.Color(0x7ab0e0) },
-      intensity: { value: 0.6 },
+      intensity: { value: 1.1 },
     },
     vertexShader: atmoVert,
     fragmentShader: atmoFrag,
