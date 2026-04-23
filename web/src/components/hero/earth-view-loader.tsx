@@ -1,4 +1,4 @@
-import { EARTH_VIEW_HEIGHT_PX } from "@/components/earth-view/earth-view";
+import { EARTH_VIEW_HEIGHT_PX } from "@/components/earth-view/constants";
 
 /** Fallback shown while the Three.js bundle + EarthView component
  *  are still loading on first hero swap. Sized to match EarthView's

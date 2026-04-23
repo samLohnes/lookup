@@ -1,15 +1,13 @@
 import { useEffect, useRef } from "react";
 import { createScene, type SceneHandles } from "./scene-factory";
+import { EARTH_VIEW_HEIGHT_PX } from "./constants";
 import { latLngAltToVec3 } from "@/lib/geo3d";
 import { useObserverStore } from "@/store/observer";
 import { useTrackAtCursor } from "@/hooks/use-track-at-cursor";
 
-const TEXTURE_URL = "/earth-blue-marble.jpg";
+export { EARTH_VIEW_HEIGHT_PX } from "./constants";
 
-/** Pixel height of the Earth view hero card. Shared with EarthViewLoader
- *  so the Suspense fallback matches the eventual content size and the card
- *  doesn't jump. */
-export const EARTH_VIEW_HEIGHT_PX = 320;
+const TEXTURE_URL = "/earth-blue-marble.jpg";
 
 /** 3D earth view rendered with Three.js. Mounts a canvas inside a div,
  *  drives a requestAnimationFrame render loop, and updates mesh positions
