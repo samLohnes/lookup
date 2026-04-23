@@ -4,7 +4,7 @@ import { server } from "./msw/server";
 
 // cmdk uses ResizeObserver internally; jsdom doesn't provide it.
 if (typeof ResizeObserver === "undefined") {
-  global.ResizeObserver = class ResizeObserver {
+  globalThis.ResizeObserver = class ResizeObserver {
     observe() {}
     unobserve() {}
     disconnect() {}
