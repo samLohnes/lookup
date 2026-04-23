@@ -94,18 +94,35 @@ export function createGroundTrackMesh(
 
   group.visible = false;
   let currentSampleCount = 0;
+  let allPositions: number[] = [];
 
   const setTrack = (samples: SkyTrackSample[]) => {
     const positions = samplesToSurfacePositions(samples, earthRadius);
     bgGeom.setPositions(positions);
     progGeom.setPositions(positions);
+    allPositions = positions;
     currentSampleCount = samples.length;
+    progLine.visible = true;
+    glowLine.visible = true;
   };
 
+  /** Truncate the progress line to [0..cursorIndex] samples.
+   *
+   *  `Line2` from three/examples renders thick lines as instanced quads, so
+   *  `geometry.setDrawRange()` does NOT shorten what's drawn. The reliable
+   *  way to truncate is to re-set the position attribute with a sliced array.
+   *  ~200 samples × 60fps = trivial allocation cost. */
   const setProgress = (cursorIndex: number) => {
     const clamped = Math.max(0, Math.min(cursorIndex, currentSampleCount));
-    progLine.geometry.setDrawRange(0, clamped);
-    glowLine.geometry.setDrawRange(0, clamped);
+    if (clamped < 2 || allPositions.length === 0) {
+      progLine.visible = false;
+      glowLine.visible = false;
+      return;
+    }
+    progLine.visible = true;
+    glowLine.visible = true;
+    const truncated = allPositions.slice(0, clamped * 3);
+    progGeom.setPositions(truncated);
   };
 
   const setVisible = (v: boolean) => {

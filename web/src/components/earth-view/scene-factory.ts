@@ -66,6 +66,11 @@ export async function createScene(
   renderer.setPixelRatio(
     typeof window !== "undefined" ? window.devicePixelRatio : 1,
   );
+  // Lift overall scene brightness — Direction A aesthetic should read
+  // bright and clear, not muddy. ACES-style tone mapping + > 1 exposure
+  // pulls highlights up while keeping the night side legible.
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.4;
 
   // Meshes that need texture loading run concurrently.
   const [earth, starfield] = await Promise.all([
