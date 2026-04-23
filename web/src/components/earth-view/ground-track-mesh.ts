@@ -12,7 +12,17 @@ type SkyTrackSample = {
 const DEG = Math.PI / 180;
 
 /** Convert dense sky-track samples to a flat number[] of surface positions
- *  (tiny outward offset to avoid z-fighting with the earth mesh). */
+ *  (tiny outward offset to avoid z-fighting with the earth mesh).
+ *
+ *  Uses the same convention as `latLngAltToVec3` in `@/lib/geo3d`:
+ *  - +y = north pole
+ *  - +x = (lat=0, lng=0)
+ *  - -z = (lat=0, lng=90°E)
+ *
+ *  Keeping this aligned with `latLngAltToVec3` is critical — the satellite
+ *  marker uses that helper. Any divergence renders the track on the opposite
+ *  hemisphere from the satellite.
+ */
 export function samplesToSurfacePositions(
   samples: SkyTrackSample[],
   radius: number,
@@ -24,8 +34,8 @@ export function samplesToSurfacePositions(
     const lngR = s.lng * DEG;
     out.push(
       offset * Math.cos(latR) * Math.cos(lngR),
-      offset * Math.cos(latR) * Math.sin(lngR),
       offset * Math.sin(latR),
+      -offset * Math.cos(latR) * Math.sin(lngR),
     );
   }
   return out;

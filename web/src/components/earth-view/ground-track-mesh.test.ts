@@ -23,13 +23,24 @@ describe("samplesToSurfacePositions", () => {
     expect(Math.abs(out[2])).toBeLessThan(0.01);
   });
 
-  it("places (lat=90, lng=*) near the north pole (0, 0, 1)", () => {
+  it("places (lat=90, lng=*) near the north pole (0, 1, 0)", () => {
+    // +y = north, matching `latLngAltToVec3` convention in @/lib/geo3d.
     const out = samplesToSurfacePositions(
       [{ lat: 90, lng: 42, altitudeM: 0 }],
       1.0,
     );
     expect(Math.abs(out[0])).toBeLessThan(0.01);
+    expect(out[1]).toBeGreaterThan(0.99);
+    expect(Math.abs(out[2])).toBeLessThan(0.01);
+  });
+
+  it("places (lat=0, lng=90°E) at approximately (0, 0, -1) — east = -z", () => {
+    const out = samplesToSurfacePositions(
+      [{ lat: 0, lng: 90, altitudeM: 0 }],
+      1.0,
+    );
+    expect(Math.abs(out[0])).toBeLessThan(0.01);
     expect(Math.abs(out[1])).toBeLessThan(0.01);
-    expect(out[2]).toBeGreaterThan(0.99);
+    expect(out[2]).toBeLessThan(-0.99);
   });
 });
