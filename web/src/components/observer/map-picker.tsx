@@ -2,6 +2,10 @@ import { useEffect, useRef } from "react";
 import L from "leaflet";
 import { useObserverStore } from "@/store/observer";
 
+// NOTE: not unit-tested — Leaflet's DOM coupling makes RTL testing brittle.
+// Verified by manual smoke + the integration with the observer store
+// (covered by store tests). Revisit if M4 changes the lifecycle.
+
 // Default Leaflet marker icons don't bundle through Vite — use CDN URLs.
 const MARKER_ICON = new L.Icon({
   iconUrl: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-icon.png",
