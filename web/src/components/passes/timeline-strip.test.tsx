@@ -79,7 +79,7 @@ describe("TimelineStrip", () => {
         }),
       ),
     );
-    const { container } = renderWithProviders(<TimelineStrip />);
+    renderWithProviders(<TimelineStrip />);
 
     // Wait for bars to appear.
     const bars = await screen.findAllByLabelText(/Pass at/);
