@@ -4,7 +4,15 @@ interface FormatOpts {
   observerName: string;
 }
 
-/** Convert an ISO-8601 UTC string to the basic ICS UTC format: YYYYMMDDTHHMMSSZ. */
+/** Convert an ISO-8601 UTC string to ICS DATE-TIME UTC format.
+ *
+ *  Input must end in 'Z' (UTC marker). Non-UTC offsets and missing-Z inputs
+ *  will produce malformed ICS output. Our API always returns Z-suffixed UTC
+ *  ISO strings, and `new Date().toISOString()` always emits Z; this function
+ *  is only safe for those paths.
+ *
+ *  Example: "2026-05-01T02:00:00Z" → "20260501T020000Z"
+ */
 function toIcsUtc(iso: string): string {
   // 2026-05-01T02:00:00Z → 20260501T020000Z
   return iso.replace(/[-:]/g, "").replace(/\.\d+Z?$/, "Z").replace("Z", "Z");
