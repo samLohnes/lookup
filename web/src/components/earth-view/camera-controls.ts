@@ -15,15 +15,19 @@ const CAMERA_DISTANCE = 3.5;
 
 /** Camera target position for a given observer location, with a small
  *  latitude offset so the observer ends up above viewport center (leaves
- *  room for the bottom dock + PiP). */
+ *  room for the bottom dock + PiP).
+ *
+ *  Uses the same lat/lng → Cartesian convention as `latLngAltToVec3`
+ *  (+y = north, -z = east). A mismatch reframes the camera to the
+ *  mirror hemisphere of the actual observer. */
 function latLngToCameraPos(lat: number, lng: number): THREE.Vector3 {
   const offsetLat = lat - 12;
   const latR = offsetLat * DEG;
   const lngR = lng * DEG;
   return new THREE.Vector3(
     CAMERA_DISTANCE * Math.cos(latR) * Math.cos(lngR),
-    CAMERA_DISTANCE * Math.cos(latR) * Math.sin(lngR),
     CAMERA_DISTANCE * Math.sin(latR),
+    -CAMERA_DISTANCE * Math.cos(latR) * Math.sin(lngR),
   );
 }
 
