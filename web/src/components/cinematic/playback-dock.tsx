@@ -12,7 +12,7 @@ export function PlaybackDock() {
   if (selectedPassId === null) return null;
 
   return (
-    <div className="fixed left-12 right-[82px] bottom-3 h-11 bg-bg-raised/90 border border-edge/40 rounded-lg backdrop-blur px-4 flex items-center gap-3 z-10 text-xs text-fg-muted">
+    <div className="fixed left-12 right-[82px] bottom-3 h-11 bg-bg-raised/82 border border-accent-400/15 rounded-lg backdrop-blur-[14px] px-4 flex items-center gap-4 z-10 text-[10.5px] text-[#c5a888]">
       <PlayButton />
       <div className="flex-1">
         <ScrubBar />
@@ -22,21 +22,27 @@ export function PlaybackDock() {
       <div className="flex items-center gap-3 tabular-nums">
         {sample ? (
           <>
-            <span>
-              <span className="text-fg-subtle mr-1">alt</span>
+            <span className="font-mono">
+              <span className="text-[8.5px] uppercase tracking-[0.08em] font-semibold text-[#6a5d48] mr-1">
+                alt
+              </span>
               {sample.alt_km.toFixed(0)} km
             </span>
-            <span>
-              <span className="text-fg-subtle mr-1">el</span>
+            <span className="font-mono">
+              <span className="text-[8.5px] uppercase tracking-[0.08em] font-semibold text-[#6a5d48] mr-1">
+                el
+              </span>
               {sample.el.toFixed(0)}°
             </span>
-            <span>
-              <span className="text-fg-subtle mr-1">mag</span>
+            <span className="font-mono">
+              <span className="text-[8.5px] uppercase tracking-[0.08em] font-semibold text-[#6a5d48] mr-1">
+                mag
+              </span>
               {sample.magnitude === null ? "—" : sample.magnitude.toFixed(1)}
             </span>
           </>
         ) : (
-          <span className="text-fg-subtle">Loading…</span>
+          <span className="text-[#6a5d48]">Loading…</span>
         )}
       </div>
     </div>
