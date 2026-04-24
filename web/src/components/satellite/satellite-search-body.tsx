@@ -13,14 +13,16 @@ import { useCatalogSearch } from "@/hooks/use-catalog-search";
 interface SatelliteSearchBodyProps {
   /** Called after a selection is made. Parent can close its popover here. */
   onSelect?: (query: string) => void;
-  /** Attach this to a wrapping element if you need to focus the input from outside. */
-  inputRef?: React.Ref<HTMLInputElement>;
 }
 
 /** The Command-based satellite search UI with no outer Popover wrapper.
  *  Reused by the research-mode `SatelliteSearch` (inside its own popover)
- *  and by the cinematic-mode Satellite chip popover (no nesting needed). */
-export function SatelliteSearchBody({ onSelect, inputRef }: SatelliteSearchBodyProps) {
+ *  and by the cinematic-mode Satellite chip popover (no nesting needed).
+ *
+ *  The search-input state is local to this component, which lives inside the
+ *  hosting popover's content. When the popover closes the component unmounts,
+ *  so reopening it starts with an empty query — intentional command-palette UX. */
+export function SatelliteSearchBody({ onSelect }: SatelliteSearchBodyProps) {
   const [input, setInput] = useState("");
   const setDraftSatellite = useDraftInputsStore((s) => s.setDraftSatellite);
   const { data: hits, isFetching } = useCatalogSearch(input);
@@ -28,7 +30,6 @@ export function SatelliteSearchBody({ onSelect, inputRef }: SatelliteSearchBodyP
   return (
     <Command shouldFilter={false}>
       <CommandInput
-        ref={inputRef}
         placeholder="ISS, starlink, 25544…"
         value={input}
         onValueChange={setInput}
