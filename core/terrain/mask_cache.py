@@ -15,15 +15,31 @@ from core._types import HorizonMask
 _LL_ROUND_DIGITS = 4
 
 
-def mask_cache_key(*, lat: float, lng: float, radius_km: float) -> str:
-    """Stable 16-char hash over rounded lat/lng + radius.
+def mask_cache_key(
+    *, lat: float, lng: float, radius_km: float, elevation_m: float
+) -> str:
+    """Stable 16-char hash over rounded lat/lng + radius + observer elevation.
+
+    `elevation_m` MUST be part of the key — the horizon mask changes
+    significantly with observer height (standing on a mountain sees a
+    mostly-clear horizon; standing at its base sees peaks towering above).
+    Excluding it from the key serves stale masks to users who moved
+    observers between elevations at the same lat/lng.
 
     Args:
         lat: Latitude in degrees.
         lng: Longitude in degrees.
         radius_km: Query radius in kilometres.
+        elevation_m: Observer elevation above sea level (metres). Rounded
+            to whole metres for the key — sub-metre precision doesn't
+            meaningfully change the mask.
     """
-    tag = f"{round(lat, _LL_ROUND_DIGITS)}_{round(lng, _LL_ROUND_DIGITS)}_{int(radius_km)}"
+    tag = (
+        f"{round(lat, _LL_ROUND_DIGITS)}_"
+        f"{round(lng, _LL_ROUND_DIGITS)}_"
+        f"{int(radius_km)}_"
+        f"{int(round(elevation_m))}"
+    )
     return hashlib.sha256(tag.encode("utf-8")).hexdigest()[:16]
 
 
