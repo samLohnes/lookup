@@ -3,6 +3,7 @@ import {
   clientTimezone,
   formatDateTimeInTz,
   formatTimeInTz,
+  formatWindowChip,
   resolveDisplayTimezone,
   tzOffsetMinutes,
 } from "@/lib/format-time";
@@ -84,5 +85,45 @@ describe("tzOffsetMinutes", () => {
     const offset = tzOffsetMinutes("America/Los_Angeles", "America/New_York", at);
     // LA is 3h behind NY → -180 min
     expect(offset).toBe(-3 * 60);
+  });
+});
+
+describe("formatWindowChip", () => {
+  it("returns 'Tonight Xp–Ya' for same-day short window ending before next noon", () => {
+    // Fixed anchor: 2026-04-24 18:00 UTC -> 2026-04-25 06:00 UTC
+    // In America/New_York (UTC-4), that is 2p -> 2a next day (< noon).
+    const out = formatWindowChip(
+      "2026-04-24T18:00:00Z",
+      "2026-04-25T06:00:00Z",
+      "client",
+      "America/New_York",
+    );
+    expect(out).toMatch(/^Tonight /);
+    expect(out).toContain("–");
+  });
+
+  it("returns 'Mon DD · Xp–Ya' for a multi-day window", () => {
+    const out = formatWindowChip(
+      "2026-04-24T18:00:00Z",
+      "2026-04-27T06:00:00Z",
+      "client",
+      "America/New_York",
+    );
+    // Not "Tonight" — the end is more than one night out.
+    expect(out).not.toMatch(/^Tonight /);
+    // Has a month/day prefix.
+    expect(out).toMatch(/Apr \d+/);
+  });
+
+  it("honors tzMode='utc'", () => {
+    const out = formatWindowChip(
+      "2026-04-24T18:00:00Z",
+      "2026-04-25T06:00:00Z",
+      "utc",
+      "America/New_York",
+    );
+    // In UTC, 18:00 -> 6:00 next day; also fits the "Tonight" rule
+      // because it starts today-UTC and ends before noon UTC next day.
+    expect(out).toMatch(/^Tonight /);
   });
 });
