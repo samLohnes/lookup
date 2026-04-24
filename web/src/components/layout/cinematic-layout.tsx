@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect } from "react";
 import { ChromeCluster } from "@/components/layout/chrome-cluster";
-import { LeftDrawer } from "@/components/cinematic/left-drawer";
+import { ConfigChips } from "@/components/cinematic/config-chips/config-chips";
 import { PassRail } from "@/components/cinematic/pass-rail";
 import { PlaybackDock } from "@/components/cinematic/playback-dock";
 import { PipSkyView } from "@/components/cinematic/pip-sky-view";
@@ -14,10 +14,9 @@ const EarthView = lazy(() =>
 );
 
 /** Hero-first cinematic layout: full-viewport 3D earth with floating chrome,
- *  left drawer for inputs, right pass rail, bottom playback dock, and a
- *  resizable PiP sky view. */
+ *  top-left config chips for inputs + Run, right pass rail, bottom playback
+ *  dock, and a resizable PiP sky view. */
 export function CinematicLayout() {
-  // Seed draft from committed on mount (same pattern as ResearchLayout).
   useEffect(() => {
     useDraftInputsStore.getState().initFromCommitted();
   }, []);
@@ -31,13 +30,15 @@ export function CinematicLayout() {
         </Suspense>
       </div>
 
-      {/* Top-right chrome cluster. */}
+      {/* Top-left config chips. */}
+      <div className="fixed top-3 left-3 z-20">
+        <ConfigChips />
+      </div>
+
+      {/* Top-right chrome cluster (mode + tz). */}
       <div className="fixed top-3 right-3 z-20">
         <ChromeCluster />
       </div>
-
-      {/* Left drawer tab + expanded panel. */}
-      <LeftDrawer />
 
       {/* Right pass rail. */}
       <PassRail />

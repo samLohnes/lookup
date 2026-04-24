@@ -7,8 +7,8 @@ import { renderWithProviders } from "@/test/render";
 vi.mock("@/components/earth-view/earth-view", () => ({
   EarthView: () => <div data-testid="earth-stub">EarthView</div>,
 }));
-vi.mock("@/components/cinematic/left-drawer", () => ({
-  LeftDrawer: () => <div data-testid="left-drawer-stub">LeftDrawer</div>,
+vi.mock("@/components/cinematic/config-chips/config-chips", () => ({
+  ConfigChips: () => <div data-testid="config-chips-stub">ConfigChips</div>,
 }));
 vi.mock("@/components/cinematic/pass-rail", () => ({
   PassRail: () => <div data-testid="pass-rail-stub">PassRail</div>,
@@ -21,15 +21,16 @@ vi.mock("@/components/cinematic/pip-sky-view", () => ({
 }));
 
 describe("CinematicLayout", () => {
-  it("composes earth + chrome + drawer + rail + dock + pip", async () => {
+  it("composes earth + chrome + config chips + rail + dock + pip", async () => {
     renderWithProviders(<CinematicLayout />);
-    // EarthView is lazy inside a Suspense; give it a tick to resolve.
     expect(await screen.findByTestId("earth-stub")).toBeInTheDocument();
-    expect(screen.getByTestId("left-drawer-stub")).toBeInTheDocument();
+    expect(screen.getByTestId("config-chips-stub")).toBeInTheDocument();
     expect(screen.getByTestId("pass-rail-stub")).toBeInTheDocument();
     expect(screen.getByTestId("playback-dock-stub")).toBeInTheDocument();
     expect(screen.getByTestId("pip-stub")).toBeInTheDocument();
-    // ChromeCluster renders at least the mode toggle.
-    expect(screen.getByRole("button", { name: /Cinematic|Research/i })).toBeInTheDocument();
+    // ChromeCluster still renders the mode toggle (right cluster).
+    expect(
+      screen.getByRole("button", { name: /Cinematic|Research/i }),
+    ).toBeInTheDocument();
   });
 });
