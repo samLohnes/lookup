@@ -3,7 +3,7 @@ import { ElevationField } from "@/components/observer/elevation-field";
 import { MapPicker } from "@/components/observer/map-picker";
 import { SavedLocations } from "@/components/observer/saved-locations";
 import { TzWarning } from "@/components/observer/tz-warning";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useObserverStore } from "@/store/observer";
 
 export function ObserverPanel() {
@@ -11,13 +11,10 @@ export function ObserverPanel() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Observer</CardTitle>
+      <CardContent className="space-y-4">
         <p className="text-xs text-fg-muted">
           {current.name} · {current.lat.toFixed(4)}°, {current.lng.toFixed(4)}°
         </p>
-      </CardHeader>
-      <CardContent className="space-y-4">
         <TzWarning />
         <AddressSearch />
         <MapPicker />

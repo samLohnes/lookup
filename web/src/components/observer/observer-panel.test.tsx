@@ -10,13 +10,12 @@ vi.mock("@/components/observer/map-picker", () => ({
 }));
 
 describe("ObserverPanel", () => {
-  it("shows the current observer name and rounded coords in the header", () => {
+  it("shows the current observer name and rounded coords", () => {
     useObserverStore.setState({
       current: { lat: 40.7128, lng: -74.006, elevation_m: 10, name: "Brooklyn" },
       saved: [],
     });
     renderWithProviders(<ObserverPanel />);
-    expect(screen.getByText("Observer")).toBeInTheDocument();
     expect(
       screen.getByText(/Brooklyn · 40\.7128°, -74\.0060°/),
     ).toBeInTheDocument();

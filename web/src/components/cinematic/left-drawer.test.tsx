@@ -19,15 +19,22 @@ describe("LeftDrawer", () => {
     useDraftInputsStore.getState().initFromCommitted();
   });
 
-  it("starts collapsed, showing only the tab", () => {
+  it("starts collapsed — drawer hidden, tab visible", () => {
     renderWithProviders(<LeftDrawer />);
-    expect(screen.getByText(/Observer · Satellite · Window/i)).toBeInTheDocument();
-    expect(screen.queryByTestId("observer-panel-stub")).toBeNull();
+    // Tab is always rendered.
+    const tab = screen.getByText(/Observer · Satellite · Window/i);
+    expect(tab).toBeInTheDocument();
+    expect(tab.getAttribute("aria-hidden")).toBe("false");
+    // Drawer is rendered too, but hidden via aria-hidden.
+    const drawer = screen.getByRole("complementary", { hidden: true });
+    expect(drawer.getAttribute("aria-hidden")).toBe("true");
   });
 
   it("clicking the tab expands the drawer", () => {
     renderWithProviders(<LeftDrawer />);
     fireEvent.click(screen.getByText(/Observer · Satellite · Window/i));
+    const drawer = screen.getByRole("complementary");
+    expect(drawer.getAttribute("aria-hidden")).toBe("false");
     expect(screen.getByTestId("observer-panel-stub")).toBeInTheDocument();
     expect(screen.getByTestId("satellite-search-stub")).toBeInTheDocument();
     expect(screen.getByTestId("time-range-picker-stub")).toBeInTheDocument();
