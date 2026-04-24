@@ -1,12 +1,17 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useTimeRangeStore, computePresetWindow } from "@/store/time-range";
+import { computePresetWindow } from "@/store/time-range";
 import { useDraftInputsStore } from "@/store/draft-inputs";
 import { toLocalInput, fromLocalInput } from "@/lib/datetime";
 
+/** Window editor. Reads AND writes via the draft-inputs store so typed
+ *  values aren't clobbered by the committed store between keystrokes.
+ *  Commit happens when the user clicks Run (top-left chip in cinematic
+ *  mode, or the Run button in research mode). */
 export function TimeRangePicker() {
-  const { fromUtc, toUtc } = useTimeRangeStore();
+  const fromUtc = useDraftInputsStore((s) => s.draft.window.fromUtc);
+  const toUtc = useDraftInputsStore((s) => s.draft.window.toUtc);
   const setDraftWindow = useDraftInputsStore((s) => s.setDraftWindow);
 
   return (
