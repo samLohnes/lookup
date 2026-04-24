@@ -43,7 +43,7 @@ export function PassRowExpanded({ pass }: PassRowExpandedProps) {
     ? formatSunlit(pass.sunlit_fraction)
     : "—";
 
-  const satelliteText = pass.kind === "single" ? pass.name : pass.name;
+  const satelliteText = pass.name;
 
   const handleIcsExport = () => {
     const ics = formatPassAsIcs(pass, { observerName });
