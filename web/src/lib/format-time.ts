@@ -164,3 +164,10 @@ function dayDiff(a: string, b: string): number {
   const bMs = Date.UTC(by, bm - 1, bd);
   return Math.round((bMs - aMs) / 86_400_000);
 }
+
+/** Format a duration in seconds as e.g. "5m 42s". */
+export function formatDurationShort(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}m ${s}s`;
+}

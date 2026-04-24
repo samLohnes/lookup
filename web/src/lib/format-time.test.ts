@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   clientTimezone,
   formatDateTimeInTz,
+  formatDurationShort,
   formatTimeInTz,
   formatWindowChip,
   resolveDisplayTimezone,
@@ -125,5 +126,19 @@ describe("formatWindowChip", () => {
     // In UTC, 18:00 -> 6:00 next day; also fits the "Tonight" rule
       // because it starts today-UTC and ends before noon UTC next day.
     expect(out).toMatch(/^Tonight /);
+  });
+});
+
+describe("formatDurationShort", () => {
+  it("formats minutes and seconds", () => {
+    expect(formatDurationShort(372)).toBe("6m 12s");
+  });
+
+  it("formats under a minute", () => {
+    expect(formatDurationShort(45)).toBe("0m 45s");
+  });
+
+  it("formats zero as 0m 0s", () => {
+    expect(formatDurationShort(0)).toBe("0m 0s");
   });
 });
