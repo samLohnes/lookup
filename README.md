@@ -5,12 +5,11 @@ Runs entirely on your machine: skyfield + FastAPI backend, React + Three.js
 frontend, zero cloud dependencies beyond free data sources (Celestrak TLEs,
 OpenTopography DEM tiles, OSM map tiles).
 
-**Version:** v0.6.0 — adds cinematic mode: a full-viewport 3D earth hero
-with drawer-based controls, a resizable picture-in-picture sky view, and
-commit-then-query inputs. Researchers can toggle to the classic 3-column
-layout at any time via the top-right chrome. Remaining polish items
-(atmosphere shader refinement, motion design, richer typography, magnitude
-filter UI, user-drawn horizon) are planned as follow-on milestones.
+**Version:** v0.7.0 — Observatory aesthetic (Fraunces / Inter / JetBrains
+Mono typography, amber-gold accent), procedural Milky Way starfield,
+refined atmosphere, redesigned observer-elevation field, and a top-left
+row of config chips (Observer · Satellite · Window · Visibility · Run)
+replacing the cinematic-mode left drawer.
 
 ![Earth view with playback](docs/screenshots/earth-view.png)
 
@@ -76,7 +75,8 @@ Open `http://localhost:5173/`.
 
 1. The observer defaults to Brooklyn, NY. Click on the map to move the pin,
    or type an address in the search box.
-2. The satellite defaults to ISS. Click the dropdown to search for others
+2. The satellite defaults to ISS. Click the **SATELLITE** chip (cinematic)
+   or the satellite dropdown (research) to search for others
    (`hubble`, `starlink`, `25544`, etc.).
 3. Pick a time window — the presets (`Next 24 h`, `Next 3 d`, `Next 7 d`)
    are fastest.
@@ -172,9 +172,8 @@ docs/
 
 ## What's next
 
-- **Cinematic polish** — atmosphere shader on the 3D earth, day/night
-  shading + city lights, cloud layer, starfield on the sky view, motion
-  design throughout, custom scrubber, typography system.
+- **Visual depth** — day/night terminator + city lights, cloud layer,
+  custom playback scrubber with spring physics, sky-view starfield.
 - **Deferred features** — magnitude filter UI, ground-track line in 3D,
   camera drag override, user-drawn horizon obstructions.
 - **Optional packaging** — Tauri/Electron desktop binary, CLI wrapping the
