@@ -3,15 +3,8 @@ import { useCurrentPasses } from "@/hooks/use-current-passes";
 import { useSelectionStore } from "@/store/selection";
 import { useDisplayTzStore } from "@/store/display-tz";
 import { useObserverTimezone } from "@/hooks/use-observer-timezone";
-import { formatTimeInTz } from "@/lib/format-time";
+import { formatTimeInTz, formatDurationShort } from "@/lib/format-time";
 import type { PassItem } from "@/types/api";
-
-/** Format a duration in seconds as e.g. "5m 42s". */
-function formatDurationShort(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}m ${s}s`;
-}
 
 /** Compact time format (e.g. "3:41 AM") — no seconds, fits the 70px rail. */
 const COMPACT_TIME_OPTS: Intl.DateTimeFormatOptions = {
