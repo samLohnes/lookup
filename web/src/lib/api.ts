@@ -1,5 +1,6 @@
 import type {
   CatalogHitResponse,
+  ElevationResponse,
   GeoTimezoneResponse,
   HorizonResponse,
   PassesRequest,
@@ -76,5 +77,10 @@ export const api = {
   geoTimezone: (lat: number, lng: number) =>
     request<GeoTimezoneResponse>(
       `/geo/timezone?lat=${lat}&lng=${lng}`,
+    ),
+
+  geoElevation: (lat: number, lng: number) =>
+    request<ElevationResponse>(
+      `/geo/elevation?lat=${lat}&lng=${lng}`,
     ),
 };

@@ -55,17 +55,41 @@ class TerrainFetcher:
         if cached_mask is not None:
             return cached_mask
 
-        dem_key = dem_cache_key(lat=observer.lat, lng=observer.lng, radius_km=self._radius_km)
+        dem = self._load_or_fetch_dem(
+            lat=observer.lat, lng=observer.lng, radius_km=self._radius_km
+        )
+        mask = compute_horizon_mask(dem=dem, observer=observer)
+        self._mask_cache.save(key, mask)
+        return mask
+
+    def get_elevation_m(self, *, lat: float, lng: float, radius_km: int = 1) -> float:
+        """Sample DEM elevation (metres above sea level) at the centre of a tile.
+
+        Fetches a small DEM tile around (lat, lng) — defaulting to a 1 km
+        half-width box — and returns the elevation at the centre pixel.
+        Reuses the same DEM cache as `get_horizon_mask`; the cache key
+        already includes `radius_km`, so small probe tiles never collide
+        with the larger horizon-mask tiles.
+
+        Args:
+            lat: Observer latitude in degrees.
+            lng: Observer longitude in degrees.
+            radius_km: Half-width of the DEM tile to fetch. 1 km is plenty
+                for a single-point sample and keeps OpenTopography traffic
+                tiny.
+        """
+        dem = self._load_or_fetch_dem(lat=lat, lng=lng, radius_km=radius_km)
+        rows, cols = dem.shape
+        return float(dem.elevations[rows // 2, cols // 2])
+
+    def _load_or_fetch_dem(self, *, lat: float, lng: float, radius_km: int):
+        """Return a cached DEM tile, fetching + saving on a miss."""
+        dem_key = dem_cache_key(lat=lat, lng=lng, radius_km=radius_km)
         dem = self._dem_cache.load(dem_key)
         if dem is None:
-            tiff_bytes = self._client.fetch(
-                lat=observer.lat, lng=observer.lng, radius_km=self._radius_km
-            )
+            tiff_bytes = self._client.fetch(lat=lat, lng=lng, radius_km=radius_km)
             self._dem_cache.save_bytes(dem_key, tiff_bytes)
             dem = self._dem_cache.load(dem_key)
             if dem is None:
                 raise RuntimeError("DEM cache load failed immediately after save — check disk space/permissions")
-
-        mask = compute_horizon_mask(dem=dem, observer=observer)
-        self._mask_cache.save(key, mask)
-        return mask
+        return dem

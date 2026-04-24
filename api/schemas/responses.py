@@ -106,6 +106,14 @@ class GeoTimezoneResponse(BaseModel):
     timezone: str  # IANA name, e.g. "America/New_York" or "Etc/GMT+5" for ocean points
 
 
+class ElevationResponse(BaseModel):
+    """DEM-sampled terrain elevation (metres above sea level) at a lat/lng."""
+
+    lat: float
+    lng: float
+    elevation_m: float
+
+
 class PassesResponse(BaseModel):
     """Top-level response envelope for the /passes endpoint."""
 
