@@ -94,36 +94,30 @@ export function createGroundTrackMesh(
 
   group.visible = false;
   let currentSampleCount = 0;
-  let allPositions: number[] = [];
 
   const setTrack = (samples: SkyTrackSample[]) => {
     const positions = samplesToSurfacePositions(samples, earthRadius);
     bgGeom.setPositions(positions);
     progGeom.setPositions(positions);
-    allPositions = positions;
     currentSampleCount = samples.length;
     progLine.visible = true;
     glowLine.visible = true;
   };
 
-  /** Truncate the progress line to a fractional sample index.
+  /** Truncate the progress line to N segments via `instanceCount`.
    *
-   *  `cursorIndex` may be fractional — e.g. 47.3 means "all samples up to 47
-   *  plus an interpolated point 30% of the way to sample 48". This keeps
-   *  the progress line's tip aligned with the (interpolated) satellite
-   *  marker position; otherwise the tip lags by ~1 sample width.
-   *
-   *  `Line2` from three/examples renders thick lines as instanced quads, so
-   *  `geometry.setDrawRange()` does NOT shorten what's drawn. We re-set the
-   *  position attribute with a sliced + interpolated array each frame.
-   *  ~200 samples × 60fps = trivial allocation cost. */
+   *  `cursorIndex` is a fractional sample position (e.g. 47.3 = "between
+   *  samples 47 and 48"). We render `floor(cursorIndex)` complete segments
+   *  using `LineGeometry.instanceCount` — the underlying `Line2` is built
+   *  on `InstancedBufferGeometry`, and `instanceCount` is what controls how
+   *  many segment quads get drawn. This is O(1) per frame and avoids the
+   *  per-frame buffer reallocation that `setPositions` triggers. */
   const setProgress = (cursorIndex: number) => {
     const clamped = Math.max(
       0,
       Math.min(cursorIndex, currentSampleCount - 1),
     );
     const intIdx = Math.floor(clamped);
-    const frac = clamped - intIdx;
     if (intIdx < 1 || allPositions.length === 0) {
       progLine.visible = false;
       glowLine.visible = false;
@@ -131,19 +125,10 @@ export function createGroundTrackMesh(
     }
     progLine.visible = true;
     glowLine.visible = true;
-    // Include all complete samples [0..intIdx] (intIdx + 1 points).
-    const truncated = allPositions.slice(0, (intIdx + 1) * 3);
-    // Append an interpolated tip if there's a fractional advance toward intIdx+1.
-    if (frac > 0 && intIdx + 1 < currentSampleCount) {
-      const a = intIdx * 3;
-      const b = (intIdx + 1) * 3;
-      truncated.push(
-        allPositions[a] + (allPositions[b] - allPositions[a]) * frac,
-        allPositions[a + 1] + (allPositions[b + 1] - allPositions[a + 1]) * frac,
-        allPositions[a + 2] + (allPositions[b + 2] - allPositions[a + 2]) * frac,
-      );
-    }
-    progGeom.setPositions(truncated);
+    // For N points there are N-1 segments. Show the first `intIdx` segments
+    // (covering samples 0..intIdx). Drops fractional precision — the tip
+    // lags by at most 1 sample width which is visually acceptable.
+    progGeom.instanceCount = intIdx;
   };
 
   const setVisible = (v: boolean) => {
