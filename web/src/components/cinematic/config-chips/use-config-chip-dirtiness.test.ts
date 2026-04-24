@@ -58,4 +58,21 @@ describe("useConfigChipDirtiness", () => {
       any: true,
     });
   });
+
+  it("clears observer-dirty after commit writes draft to committed stores", () => {
+    useDraftInputsStore.getState().setDraftObserver({
+      lat: 37.7, lng: -122.4, elevation_m: 20, name: "SF",
+    });
+    const { result, rerender } = renderHook(() => useConfigChipDirtiness());
+    expect(result.current.observer).toBe(true);
+
+    // Commit — writes draft to the committed observer store. The hook must
+    // re-evaluate because it subscribes to the observer store directly,
+    // not only to draft-inputs.
+    useDraftInputsStore.getState().commit();
+    rerender();
+
+    expect(result.current.observer).toBe(false);
+    expect(result.current.any).toBe(false);
+  });
 });
