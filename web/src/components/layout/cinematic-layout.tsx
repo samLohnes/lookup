@@ -23,8 +23,8 @@ export function CinematicLayout() {
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-bg">
-      {/* Earth hero — full viewport background. */}
-      <div className="absolute inset-0 z-0">
+      {/* Earth hero — renders in the viewport area left of the 360px passes panel so it centers in the visible space. */}
+      <div className="absolute top-0 bottom-0 left-0 right-[360px] z-0">
         <Suspense fallback={<EarthViewLoader />}>
           <EarthView />
         </Suspense>

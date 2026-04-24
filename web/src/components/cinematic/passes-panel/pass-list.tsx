@@ -29,14 +29,14 @@ export function PassList() {
 
   if (passes.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center px-4 text-center text-[12px] text-[#8a7c68]">
+      <div className="flex-1 min-h-0 flex items-center justify-center px-4 text-center text-[12px] text-[#8a7c68]">
         No passes tonight
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-2">
+    <div className="flex-1 min-h-0 overflow-y-auto p-2">
       {passes.map((pass) => (
         <PassRow
           key={pass.id}
