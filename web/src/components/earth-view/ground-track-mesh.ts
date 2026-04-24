@@ -62,10 +62,14 @@ export function createGroundTrackMesh(
 
   const bgGeom = new LineGeometry();
   const bgMat = new LineMaterial({
-    color: 0xc8d2e6,
+    // Background line shows the full pass trajectory — future + past.
+    // Needs to be clearly readable against dark ocean + bright land, so
+    // bump opacity vs. the original 0.3 and shift toward a warm off-white
+    // so it doesn't blend into the ocean blue.
+    color: 0xf5e8d0,
     linewidth: 1.5,
     transparent: true,
-    opacity: 0.3,
+    opacity: 0.7,
   });
   bgMat.resolution.set(rendererSize.width, rendererSize.height);
   const bgLine = new Line2(bgGeom, bgMat);
