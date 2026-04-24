@@ -1,9 +1,8 @@
 import { Suspense, lazy, useEffect } from "react";
 import { ChromeCluster } from "@/components/layout/chrome-cluster";
 import { ConfigChips } from "@/components/cinematic/config-chips/config-chips";
-import { PassRail } from "@/components/cinematic/pass-rail";
+import { PassesPanel } from "@/components/cinematic/passes-panel/passes-panel";
 import { PlaybackDock } from "@/components/cinematic/playback-dock";
-import { PipSkyView } from "@/components/cinematic/pip-sky-view";
 import { EarthViewLoader } from "@/components/hero/earth-view-loader";
 import { useDraftInputsStore } from "@/store/draft-inputs";
 
@@ -14,8 +13,9 @@ const EarthView = lazy(() =>
 );
 
 /** Hero-first cinematic layout: full-viewport 3D earth with floating chrome,
- *  top-left config chips for inputs + Run, right pass rail, bottom playback
- *  dock, and a resizable PiP sky view. */
+ *  top-left config chips for inputs + Run, right-side passes panel (passes
+ *  + sky view + telemetry), and slim bottom playback dock when a pass is
+ *  selected. */
 export function CinematicLayout() {
   useEffect(() => {
     useDraftInputsStore.getState().initFromCommitted();
@@ -40,14 +40,11 @@ export function CinematicLayout() {
         <ChromeCluster />
       </div>
 
-      {/* Right pass rail. */}
-      <PassRail />
+      {/* Right-side passes panel (always expanded). */}
+      <PassesPanel />
 
       {/* Bottom playback dock (hidden when no pass selected). */}
       <PlaybackDock />
-
-      {/* PiP sky view — floats above the earth, below chrome. */}
-      <PipSkyView />
     </div>
   );
 }
