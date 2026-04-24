@@ -72,11 +72,8 @@ export async function createScene(
   renderer.toneMapping = THREE.LinearToneMapping;
   renderer.toneMappingExposure = 1.1;
 
-  // Meshes that need texture loading run concurrently.
-  const [earth, starfield] = await Promise.all([
-    createEarthMesh(EARTH_RADIUS_UNITS),
-    createStarfieldMesh(EARTH_RADIUS_UNITS),
-  ]);
+  const earth = await createEarthMesh(EARTH_RADIUS_UNITS);
+  const starfield = createStarfieldMesh(EARTH_RADIUS_UNITS);
   const atmosphere = createAtmosphereMesh(EARTH_RADIUS_UNITS);
 
   scene.add(starfield.mesh); // furthest back
