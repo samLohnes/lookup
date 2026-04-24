@@ -6,17 +6,18 @@ import { useObserverTimezone } from "@/hooks/use-observer-timezone";
 import { formatTimeInTz } from "@/lib/format-time";
 import type { PassItem } from "@/types/api";
 
-/** Format a nullable magnitude to one decimal place, or an em-dash. */
-function formatMag(mag: number | null): string {
-  return mag === null ? "—" : mag.toFixed(1);
-}
-
 /** Format a duration in seconds as e.g. "5m 42s". */
 function formatDurationShort(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m}m ${s}s`;
 }
+
+/** Compact time format (e.g. "3:41 AM") — no seconds, fits the 70px rail. */
+const COMPACT_TIME_OPTS: Intl.DateTimeFormatOptions = {
+  hour: "numeric",
+  minute: "2-digit",
+};
 
 /** Right-side rail listing current passes. Collapses to a narrow strip of
  *  peak times; expands to a wider panel showing magnitude and duration.
@@ -51,7 +52,12 @@ export function PassRail() {
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
         {passes.map((p: PassItem) => {
           const isActive = p.id === selectedId;
-          const time = formatTimeInTz(p.peak.time, tzMode, observerTz);
+          const time = formatTimeInTz(
+            p.peak.time,
+            tzMode,
+            observerTz,
+            COMPACT_TIME_OPTS,
+          );
           return (
             <button
               key={p.id}
@@ -70,11 +76,13 @@ export function PassRail() {
             >
               {expanded ? (
                 <div className="space-y-1">
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-baseline">
                     <span className="font-semibold">{time}</span>
-                    <span className="tabular-nums text-fg-muted">
-                      {formatMag(p.max_magnitude)} mag
-                    </span>
+                    {p.max_magnitude !== null ? (
+                      <span className="tabular-nums text-fg-muted text-[10px]">
+                        mag {p.max_magnitude.toFixed(1)}
+                      </span>
+                    ) : null}
                   </div>
                   <div className="flex gap-2 text-[10px] text-fg-muted tabular-nums">
                     <span>{formatDurationShort(p.duration_s)}</span>
