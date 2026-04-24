@@ -10,6 +10,13 @@ import { usePlaybackStore } from "@/store/playback";
 /** Find the largest index `i` such that `samples[i].time <= cursorIso`.
  *  Returns 0 when the cursor precedes the first sample. `TrackSampleResponse`
  *  times are ISO-8601 so a simple string compare (or Date.parse) works. */
+/** Fractional sample index at the playback cursor.
+ *
+ *  Returns N.frac where N is the largest index whose time ≤ cursor and frac
+ *  is the fractional progress to sample N+1. Feeding this to `setProgress`
+ *  lets the progress line's tip track the satellite marker smoothly instead
+ *  of snapping between sample boundaries (which looks ~1-2 sample-widths
+ *  behind the marker during fast playback). */
 function cursorIndexFor(
   samples: { time: string }[],
   cursorIso: string | null,
@@ -17,12 +24,15 @@ function cursorIndexFor(
   if (!cursorIso || samples.length === 0) return 0;
   const cursor = Date.parse(cursorIso);
   if (Number.isNaN(cursor)) return 0;
-  let idx = 0;
-  for (let i = 0; i < samples.length; i += 1) {
-    if (Date.parse(samples[i].time) <= cursor) idx = i;
-    else break;
+  for (let i = 0; i < samples.length - 1; i += 1) {
+    const t1 = Date.parse(samples[i + 1].time);
+    if (cursor <= t1) {
+      const t0 = Date.parse(samples[i].time);
+      if (cursor <= t0) return i;
+      return i + (cursor - t0) / (t1 - t0);
+    }
   }
-  return idx;
+  return samples.length - 1;
 }
 
 /** 3D earth view rendered with Three.js. Mounts a canvas that fills its
@@ -183,6 +193,16 @@ export function EarthView() {
     }
     handles.setProgress(cursorIndexFor(samples, cursorUtc));
   }, [cursorUtc, skyTrack.data]);
+
+  // Sync the day/night terminator to the playback cursor while a pass is
+  // selected. Otherwise the lit hemisphere stays at "now" (wall clock) which
+  // is misleading when the user is observing a pass at a different time.
+  useEffect(() => {
+    const handles = handlesRef.current;
+    if (!handles) return;
+    const date = cursorUtc ? new Date(cursorUtc) : new Date();
+    handles.updateSunDirection(date);
+  }, [cursorUtc]);
 
   return (
     <div
