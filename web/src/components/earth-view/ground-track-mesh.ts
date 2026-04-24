@@ -118,7 +118,7 @@ export function createGroundTrackMesh(
       Math.min(cursorIndex, currentSampleCount - 1),
     );
     const intIdx = Math.floor(clamped);
-    if (intIdx < 1 || allPositions.length === 0) {
+    if (intIdx < 1 || currentSampleCount === 0) {
       progLine.visible = false;
       glowLine.visible = false;
       return;
