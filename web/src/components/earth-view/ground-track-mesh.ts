@@ -106,22 +106,43 @@ export function createGroundTrackMesh(
     glowLine.visible = true;
   };
 
-  /** Truncate the progress line to [0..cursorIndex] samples.
+  /** Truncate the progress line to a fractional sample index.
+   *
+   *  `cursorIndex` may be fractional — e.g. 47.3 means "all samples up to 47
+   *  plus an interpolated point 30% of the way to sample 48". This keeps
+   *  the progress line's tip aligned with the (interpolated) satellite
+   *  marker position; otherwise the tip lags by ~1 sample width.
    *
    *  `Line2` from three/examples renders thick lines as instanced quads, so
-   *  `geometry.setDrawRange()` does NOT shorten what's drawn. The reliable
-   *  way to truncate is to re-set the position attribute with a sliced array.
+   *  `geometry.setDrawRange()` does NOT shorten what's drawn. We re-set the
+   *  position attribute with a sliced + interpolated array each frame.
    *  ~200 samples × 60fps = trivial allocation cost. */
   const setProgress = (cursorIndex: number) => {
-    const clamped = Math.max(0, Math.min(cursorIndex, currentSampleCount));
-    if (clamped < 2 || allPositions.length === 0) {
+    const clamped = Math.max(
+      0,
+      Math.min(cursorIndex, currentSampleCount - 1),
+    );
+    const intIdx = Math.floor(clamped);
+    const frac = clamped - intIdx;
+    if (intIdx < 1 || allPositions.length === 0) {
       progLine.visible = false;
       glowLine.visible = false;
       return;
     }
     progLine.visible = true;
     glowLine.visible = true;
-    const truncated = allPositions.slice(0, clamped * 3);
+    // Include all complete samples [0..intIdx] (intIdx + 1 points).
+    const truncated = allPositions.slice(0, (intIdx + 1) * 3);
+    // Append an interpolated tip if there's a fractional advance toward intIdx+1.
+    if (frac > 0 && intIdx + 1 < currentSampleCount) {
+      const a = intIdx * 3;
+      const b = (intIdx + 1) * 3;
+      truncated.push(
+        allPositions[a] + (allPositions[b] - allPositions[a]) * frac,
+        allPositions[a + 1] + (allPositions[b + 1] - allPositions[a + 1]) * frac,
+        allPositions[a + 2] + (allPositions[b + 2] - allPositions[a + 2]) * frac,
+      );
+    }
     progGeom.setPositions(truncated);
   };
 
