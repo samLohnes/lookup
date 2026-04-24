@@ -47,3 +47,32 @@
     animation-iteration-count: 1 !important;
   }
 }
+
+/* Config chip dirty-dot pulse: subtle opacity breathing to draw attention
+ * without being distracting. ~2.5s cycle. */
+@keyframes chip-dirty-pulse {
+  0%, 100% { opacity: 0.65; }
+  50% { opacity: 1; }
+}
+
+.animate-chip-dirty-pulse {
+  animation: chip-dirty-pulse 2.5s ease-in-out infinite;
+}
+
+/* Run chip border pulse when there are pending drafts. Uses border-color
+ * shift on the accent-400 palette. ~2.5s cycle to match dirty dot. */
+@keyframes run-chip-border-pulse {
+  0%, 100% { border-color: rgba(255, 174, 96, 0.35); }
+  50% { border-color: rgba(255, 174, 96, 0.75); }
+}
+
+.animate-run-border-pulse {
+  animation: run-chip-border-pulse 2.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-chip-dirty-pulse,
+  .animate-run-border-pulse {
+    animation: none !important;
+  }
+}
