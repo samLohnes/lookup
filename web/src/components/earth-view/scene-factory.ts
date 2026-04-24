@@ -66,12 +66,11 @@ export async function createScene(
   renderer.setPixelRatio(
     typeof window !== "undefined" ? window.devicePixelRatio : 1,
   );
-  // Lift overall scene brightness — Direction A aesthetic should read
-  // bright and clear, not muddy. Linear tone mapping is a uniform
-  // multiplier (no S-curve), which preserves ocean blues; ACES crushes
-  // shadow values and turns deep-ocean tones near-black.
+  // Lift overall scene brightness slightly. Linear tone mapping is a
+  // uniform multiplier (no S-curve), which preserves the texture's
+  // vibrant ocean + land tones without crushing shadow values.
   renderer.toneMapping = THREE.LinearToneMapping;
-  renderer.toneMappingExposure = 1.6;
+  renderer.toneMappingExposure = 1.1;
 
   // Meshes that need texture loading run concurrently.
   const [earth, starfield] = await Promise.all([
