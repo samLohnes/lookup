@@ -21,8 +21,10 @@ interface PassRowProps {
 
 /** A single row in the scrollable pass list. Collapsed shows peak time +
  *  rise-direction summary. Expanded shows a four-section accordion via
- *  `PassRowExpanded`. The row is a single <button> so keyboard users can
- *  Tab to it and Enter/Space toggles. */
+ *  `PassRowExpanded`. The header is a <button> (toggles expand); the
+ *  expanded body is a sibling <div> so nested interactive elements (like
+ *  the ICS export button) work correctly — no invalid HTML, no event
+ *  bubbling collapsing the row. */
 export function PassRow({ pass, isExpanded, isSelected, onToggle }: PassRowProps) {
   const tzMode = useDisplayTzStore((s) => s.mode);
   const { data: tzData } = useObserverTimezone();
@@ -32,28 +34,31 @@ export function PassRow({ pass, isExpanded, isSelected, onToggle }: PassRowProps
   const riseCompass = azimuthToCompass(pass.rise.azimuth_deg);
   const peakElevation = pass.peak.elevation_deg.toFixed(0);
 
-  const className =
-    "w-full text-left rounded-md p-2.5 mb-1 " +
-    "border " +
+  const containerClass =
+    "rounded-md p-2.5 mb-1 border " +
     (isSelected
       ? "bg-accent-400/10 border-accent-400/45 "
       : "bg-white/[0.02] border-accent-400/8 hover:bg-white/[0.04] hover:border-accent-400/18 ");
 
   return (
-    <button
-      type="button"
-      aria-expanded={isExpanded}
-      onClick={() => onToggle(pass.id)}
-      className={className}
+    <div
+      className={containerClass}
       style={{ transition: cssTransition("background, border-color", "fast") }}
     >
-      <div className="font-serif text-[16px] font-medium text-[#e8d8c0] leading-tight">
-        {peakTime}
-      </div>
-      <div className="text-[11px] text-[#a89a84] mt-0.5">
-        rises {riseCompass} · peaks {peakElevation}°
-      </div>
+      <button
+        type="button"
+        aria-expanded={isExpanded}
+        onClick={() => onToggle(pass.id)}
+        className="w-full text-left"
+      >
+        <div className="font-serif text-[16px] font-medium text-[#e8d8c0] leading-tight">
+          {peakTime}
+        </div>
+        <div className="text-[11px] text-[#a89a84] mt-0.5">
+          rises {riseCompass} · peaks {peakElevation}°
+        </div>
+      </button>
       {isExpanded && <PassRowExpanded pass={pass} />}
-    </button>
+    </div>
   );
 }
