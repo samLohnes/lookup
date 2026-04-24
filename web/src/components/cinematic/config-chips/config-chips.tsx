@@ -3,9 +3,6 @@ import { ObserverPanel } from "@/components/observer/observer-panel";
 import { SatelliteSearchBody } from "@/components/satellite/satellite-search-body";
 import { TimeRangePicker } from "@/components/time/time-range-picker";
 import { useDraftInputsStore } from "@/store/draft-inputs";
-import { useObserverStore } from "@/store/observer";
-import { useSatelliteStore } from "@/store/satellite";
-import { useTimeRangeStore } from "@/store/time-range";
 import { useDisplayTzStore } from "@/store/display-tz";
 import { useObserverTimezone } from "@/hooks/use-observer-timezone";
 import { formatWindowChip } from "@/lib/format-time";
@@ -25,10 +22,15 @@ function truncate(s: string, max: number): string {
 export function ConfigChips() {
   const dirty = useConfigChipDirtiness();
 
-  // Committed values drive what each chip displays.
-  const observerName = useObserverStore((s) => s.current.name);
-  const satelliteQuery = useSatelliteStore((s) => s.query);
-  const { fromUtc, toUtc } = useTimeRangeStore();
+  // Draft values drive what each chip displays — chip reads as "what I've
+  // configured". The dirty indicator (from useConfigChipDirtiness) tells the
+  // user when the rendered scene hasn't caught up yet. Run commits; Discard
+  // snaps the draft back to committed.
+  const draft = useDraftInputsStore((s) => s.draft);
+  const observerName = draft.observer.name;
+  const satelliteQuery = draft.satellite.query;
+  const fromUtc = draft.window.fromUtc;
+  const toUtc = draft.window.toUtc;
   const tzMode = useDisplayTzStore((s) => s.mode);
   const { data: observerTzData } = useObserverTimezone();
   const observerTz = observerTzData?.timezone ?? null;
