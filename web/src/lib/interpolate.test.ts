@@ -63,3 +63,96 @@ describe("interpolateAtCursor", () => {
     expect(out?.time).toBe("2026-05-01T02:00:45Z");
   });
 });
+
+describe("interpolateAtCursor — azimuth wrap at north", () => {
+  it("interpolates 358° → 2° through 0°, not through 180°", () => {
+    // Two samples 60 seconds apart. Cursor at the midpoint.
+    const samples = [
+      {
+        time: "2026-04-25T00:00:00Z",
+        lat: 40, lng: -74, alt_km: 400, az: 358, el: 10,
+        range_km: 500, velocity_km_s: 7.68, magnitude: null,
+        sunlit: true, observer_dark: true,
+      },
+      {
+        time: "2026-04-25T00:01:00Z",
+        lat: 40, lng: -74, alt_km: 400, az: 2, el: 10,
+        range_km: 500, velocity_km_s: 7.68, magnitude: null,
+        sunlit: true, observer_dark: true,
+      },
+    ];
+    const out = interpolateAtCursor(samples, "2026-04-25T00:00:30Z");
+    expect(out).not.toBeNull();
+    // Midpoint of 358° → 2° going through north is 0° (or 360°, same point).
+    // Must NOT be 180° (lerp-through-south bug).
+    expect(out!.az).toBeCloseTo(0, 5);
+  });
+
+  it("interpolates 10° → 350° through 0° backward", () => {
+    // Satellite moving westward across north: az decreases from 10 → 350.
+    const samples = [
+      {
+        time: "2026-04-25T00:00:00Z",
+        lat: 40, lng: -74, alt_km: 400, az: 10, el: 10,
+        range_km: 500, velocity_km_s: 7.68, magnitude: null,
+        sunlit: true, observer_dark: true,
+      },
+      {
+        time: "2026-04-25T00:01:00Z",
+        lat: 40, lng: -74, alt_km: 400, az: 350, el: 10,
+        range_km: 500, velocity_km_s: 7.68, magnitude: null,
+        sunlit: true, observer_dark: true,
+      },
+    ];
+    const out = interpolateAtCursor(samples, "2026-04-25T00:00:30Z");
+    expect(out).not.toBeNull();
+    // Midpoint should be 0° (via the short path), NOT 180° (via south).
+    expect(out!.az).toBeCloseTo(0, 5);
+  });
+
+  it("interpolates normal range 100° → 110° linearly (no wrap)", () => {
+    // Sanity check: midpoint of 100 → 110 is 105, no wrap logic should trigger.
+    const samples = [
+      {
+        time: "2026-04-25T00:00:00Z",
+        lat: 40, lng: -74, alt_km: 400, az: 100, el: 45,
+        range_km: 500, velocity_km_s: 7.68, magnitude: null,
+        sunlit: true, observer_dark: true,
+      },
+      {
+        time: "2026-04-25T00:01:00Z",
+        lat: 40, lng: -74, alt_km: 400, az: 110, el: 45,
+        range_km: 500, velocity_km_s: 7.68, magnitude: null,
+        sunlit: true, observer_dark: true,
+      },
+    ];
+    const out = interpolateAtCursor(samples, "2026-04-25T00:00:30Z");
+    expect(out).not.toBeNull();
+    expect(out!.az).toBeCloseTo(105, 5);
+  });
+
+  it("normalizes result to [0, 360) after wrap", () => {
+    // a=350, b=10, diff+=360 → 20, result at t=0.75 = 350 + 20*0.75 = 365.
+    // Normalize: 365 % 360 = 5.
+    const samples = [
+      {
+        time: "2026-04-25T00:00:00Z",
+        lat: 40, lng: -74, alt_km: 400, az: 350, el: 10,
+        range_km: 500, velocity_km_s: 7.68, magnitude: null,
+        sunlit: true, observer_dark: true,
+      },
+      {
+        time: "2026-04-25T00:01:00Z",
+        lat: 40, lng: -74, alt_km: 400, az: 10, el: 10,
+        range_km: 500, velocity_km_s: 7.68, magnitude: null,
+        sunlit: true, observer_dark: true,
+      },
+    ];
+    // Cursor at 45s of a 60s span = t = 0.75.
+    const out = interpolateAtCursor(samples, "2026-04-25T00:00:45Z");
+    expect(out).not.toBeNull();
+    expect(out!.az).toBeCloseTo(5, 5);
+    expect(out!.az).toBeGreaterThanOrEqual(0);
+    expect(out!.az).toBeLessThan(360);
+  });
+});

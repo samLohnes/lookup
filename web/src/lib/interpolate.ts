@@ -5,6 +5,21 @@ function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
+/** Linear interpolation between two azimuth values (degrees), taking the
+ *  shorter path around the 360° circle. Inputs assumed in [0, 360).
+ *  Result normalized to [0, 360).
+ *
+ *  Naive `lerp(358, 2, 0.5)` = 180, passing through south. This function
+ *  detects wrap (|diff| > 180) and interpolates through the short side.
+ *  `lerpAzimuth(358, 2, 0.5)` = 0, passing through north as expected. */
+function lerpAzimuth(a: number, b: number, t: number): number {
+  let diff = b - a;
+  if (diff > 180) diff -= 360;
+  if (diff < -180) diff += 360;
+  const result = a + diff * t;
+  return ((result % 360) + 360) % 360;
+}
+
 /** Interpolate a TrackSample at a precise cursor time within a sample series.
  *
  * Returns null if `samples` is empty or the cursor is outside the series.
@@ -53,7 +68,7 @@ export function interpolateAtCursor(
     lat: lerp(a.lat, b.lat, t),
     lng: lerp(a.lng, b.lng, t),
     alt_km: lerp(a.alt_km, b.alt_km, t),
-    az: lerp(a.az, b.az, t),
+    az: lerpAzimuth(a.az, b.az, t),
     el: lerp(a.el, b.el, t),
     range_km: lerp(a.range_km, b.range_km, t),
     velocity_km_s: lerp(a.velocity_km_s, b.velocity_km_s, t),
