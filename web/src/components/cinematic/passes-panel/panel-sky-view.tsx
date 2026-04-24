@@ -5,7 +5,7 @@ import { SkyView } from "@/components/sky-view/sky-view";
  *  `preserveAspectRatio="xMidYMid meet"` so it self-centers. */
 export function PanelSkyView() {
   return (
-    <div className="h-[260px] border-t border-accent-400/12 bg-[rgba(10,8,20,0.5)] p-3 flex items-center justify-center">
+    <div className="h-[260px] shrink-0 border-t border-accent-400/12 bg-[rgba(10,8,20,0.5)] p-3 flex items-center justify-center">
       <SkyView />
     </div>
   );
