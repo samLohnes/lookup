@@ -25,18 +25,18 @@ void main() {
   // each hash block covers fewer screen pixels → smaller visible stars.
   vec3 q1 = dir * 1600.0;
   float h1 = hash(floor(q1));
-  float star1 = smoothstep(0.998, 1.0, h1);
+  float star1 = smoothstep(0.9992, 1.0, h1);
 
   // Tier 2 — medium stars.
   vec3 q2 = dir * 600.0;
   float h2 = hash(floor(q2));
-  float star2 = smoothstep(0.996, 1.0, h2) * 0.8;
+  float star2 = smoothstep(0.9985, 1.0, h2) * 0.8;
 
   // Tier 3 — rare bright stars. Higher frequency than before so bright
   // stars aren't blocky — one block ≈ a pixel or two at typical viewports.
   vec3 q3 = dir * 300.0;
   float h3 = hash(floor(q3));
-  float star3 = smoothstep(0.994, 1.0, h3) * 1.1;
+  float star3 = smoothstep(0.9975, 1.0, h3) * 1.1;
 
   // Milky Way band — subtle violet-white gradient along a tilted plane.
   vec3 galacticPlane = normalize(vec3(sin(0.38), 0.0, cos(0.38)));
