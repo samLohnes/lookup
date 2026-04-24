@@ -102,9 +102,13 @@ export function PipSkyView() {
           ✕
         </button>
       </div>
-      <div className="absolute inset-0 pt-6 pb-6">
-        {/* pb-6 balances the top header strip so the dome center sits at
-            the PiP's geometric center instead of 12px below it. */}
+      <div className="absolute inset-3">
+        {/* SkyView's SVG has a 1:1 aspect ratio via its viewBox. To keep
+            the dome centered in the round PiP, give it a square area
+            inset by half the header height (12px) on all sides — this
+            sizes the SVG to (PiP - 24)² and centers it at the PiP's
+            geometric midpoint. The transparent header text overlays the
+            top sliver of the dome's outer ring; visually negligible. */}
         <SkyView />
       </div>
       <div
