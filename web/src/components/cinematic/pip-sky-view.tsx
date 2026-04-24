@@ -102,7 +102,9 @@ export function PipSkyView() {
           ✕
         </button>
       </div>
-      <div className="absolute inset-0 pt-6">
+      <div className="absolute inset-0 pt-6 pb-6">
+        {/* pb-6 balances the top header strip so the dome center sits at
+            the PiP's geometric center instead of 12px below it. */}
         <SkyView />
       </div>
       <div
