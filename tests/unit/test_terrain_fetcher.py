@@ -26,6 +26,26 @@ def test_first_call_fetches_and_computes(tmp_path: Path, synth_dem_tile_bytes: b
     assert len(mask.samples_deg) == 360
 
 
+def test_get_elevation_m_returns_center_pixel(tmp_path: Path, synth_dem_tile_bytes: bytes):
+    """The synthetic 3x3 DEM peaks at 120 m in the centre cell."""
+    fetcher = TerrainFetcher(client=_client_returning(synth_dem_tile_bytes), cache_root=tmp_path)
+    elev = fetcher.get_elevation_m(lat=0.0, lng=0.0, radius_km=1)
+    assert elev == 120.0
+
+
+def test_get_elevation_m_uses_dem_cache_on_second_call(tmp_path: Path, synth_dem_tile_bytes: bytes):
+    """Repeat lookups at the same lat/lng/radius should not refetch."""
+    fetcher = TerrainFetcher(client=_client_returning(synth_dem_tile_bytes), cache_root=tmp_path)
+    fetcher.get_elevation_m(lat=0.0, lng=0.0, radius_km=1)
+
+    fail_client = MagicMock(spec=OpenTopoClient)
+    fail_client.fetch.side_effect = AssertionError("should not be called")
+    fetcher2 = TerrainFetcher(client=fail_client, cache_root=tmp_path)
+    elev = fetcher2.get_elevation_m(lat=0.0, lng=0.0, radius_km=1)
+    assert elev == 120.0
+    fail_client.fetch.assert_not_called()
+
+
 def test_second_call_uses_mask_cache_without_hitting_client(tmp_path: Path, synth_dem_tile_bytes: bytes):
     observer = Observer(lat=0.0, lng=0.0, elevation_m=100.0)
 

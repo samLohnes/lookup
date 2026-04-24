@@ -1,4 +1,5 @@
 import { AddressSearch } from "@/components/observer/address-search";
+import { ElevationField } from "@/components/observer/elevation-field";
 import { MapPicker } from "@/components/observer/map-picker";
 import { SavedLocations } from "@/components/observer/saved-locations";
 import { TzWarning } from "@/components/observer/tz-warning";
@@ -21,6 +22,7 @@ export function ObserverPanel() {
         <AddressSearch />
         <MapPicker />
         <SavedLocations />
+        <ElevationField />
       </CardContent>
     </Card>
   );

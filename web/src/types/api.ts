@@ -115,3 +115,9 @@ export interface GeoTimezoneResponse {
   lng: number;
   timezone: string; // IANA name
 }
+
+export interface ElevationResponse {
+  lat: number;
+  lng: number;
+  elevation_m: number;
+}

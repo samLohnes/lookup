@@ -39,6 +39,13 @@ export const handlers = [
     }),
   ),
 
+  http.get("/api/geo/elevation", ({ request }) => {
+    const url = new URL(request.url);
+    const lat = Number(url.searchParams.get("lat"));
+    const lng = Number(url.searchParams.get("lng"));
+    return HttpResponse.json({ lat, lng, elevation_m: 0 });
+  }),
+
   http.post("/api/sky-track", () =>
     HttpResponse.json({
       resolved_name: "ISS (ZARYA)",
