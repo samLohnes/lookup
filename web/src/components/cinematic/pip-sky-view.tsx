@@ -3,16 +3,14 @@ import { usePipSkyStore } from "@/store/pip-sky";
 import { useSelectionStore } from "@/store/selection";
 import { useObserverStore } from "@/store/observer";
 import { SkyView } from "@/components/sky-view/sky-view";
+import { MOTION, cssTransition } from "@/lib/motion";
 
-/** Pixels of clearance from the right edge — clears the pass rail (~70px
- *  wide + a small gap). */
-const PIP_RIGHT_MARGIN_PX = 80;
-/** Pixels of clearance from the bottom edge — clears the playback dock
- *  (~44px tall + padding). */
-const PIP_BOTTOM_MARGIN_PX = 68;
+const INITIAL_MARGIN = 80; // clearance from bottom dock + pass rail
 
-/** Floating, draggable, resizable PiP sky view. Auto-opens when a pass is
- *  selected; user can close, drag, or resize (aspect locked 1:1). */
+/** Floating, draggable, resizable PiP sky view. Auto-opens when a pass
+ *  is selected; user can close, drag, or resize (aspect locked 1:1).
+ *  Always rendered in the DOM — open/closed is driven by CSS opacity +
+ *  scale so the transition is smooth. */
 export function PipSkyView() {
   const { isOpen, position, size, open, close, setPosition, setSize } =
     usePipSkyStore();
@@ -24,14 +22,13 @@ export function PipSkyView() {
     if (selectedPassId !== null) open();
   }, [selectedPassId, open]);
 
-  // First-open placement: position at bottom-right with margins for the
-  // pass rail and playback dock. Sentinel coords (-1,-1) mean uninitialized.
+  // First-open: default bottom-right if still at sentinel coords.
   useEffect(() => {
-    if (!isOpen) return;
-    if (position.x >= 0 && position.y >= 0) return;
-    const x = window.innerWidth - size.width - PIP_RIGHT_MARGIN_PX;
-    const y = window.innerHeight - size.height - PIP_BOTTOM_MARGIN_PX;
-    setPosition({ x: Math.max(0, x), y: Math.max(0, y) });
+    if (isOpen && (position.x < 0 || position.y < 0)) {
+      const x = window.innerWidth - size.width - INITIAL_MARGIN;
+      const y = window.innerHeight - size.height - 68;
+      setPosition({ x, y });
+    }
   }, [isOpen, position.x, position.y, size.width, size.height, setPosition]);
 
   const [dragging, setDragging] = useState<null | { dx: number; dy: number }>(
@@ -45,10 +42,7 @@ export function PipSkyView() {
     if (!dragging && !resizing) return;
     const onMove = (e: PointerEvent) => {
       if (dragging) {
-        setPosition({
-          x: e.clientX - dragging.dx,
-          y: e.clientY - dragging.dy,
-        });
+        setPosition({ x: e.clientX - dragging.dx, y: e.clientY - dragging.dy });
       } else if (resizing) {
         const dx = e.clientX - resizing.startX;
         const dy = e.clientY - resizing.startY;
@@ -68,20 +62,31 @@ export function PipSkyView() {
     };
   }, [dragging, resizing, setPosition, setSize]);
 
-  if (!isOpen) return null;
-
   return (
     <div
-      className="fixed z-20 rounded-full border border-accent/40 bg-bg-raised/95 backdrop-blur shadow-xl overflow-hidden"
+      className="fixed z-20 rounded-full border-[1.5px] border-accent-400/30 bg-[rgba(14,10,24,0.9)] overflow-hidden"
       style={{
         left: position.x,
         top: position.y,
         width: size.width,
         height: size.height,
+        opacity: isOpen ? 1 : 0,
+        transform: `scale(${isOpen ? 1 : 0.96})`,
+        transformOrigin: "center",
+        transition: `opacity ${MOTION.medium}ms ${MOTION.ease}, transform ${MOTION.medium}ms ${MOTION.ease}`,
+        pointerEvents: isOpen ? "auto" : "none",
+        boxShadow:
+          "0 6px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 174, 96, 0.08)",
       }}
+      aria-hidden={!isOpen}
     >
+      {/* Header — taller with gradient fade */}
       <div
-        className="absolute top-0 left-0 right-0 h-6 flex items-center justify-between px-3 text-[10px] text-fg-muted cursor-move z-10"
+        className="absolute top-0 left-0 right-0 h-[26px] flex items-center justify-between px-3 z-10 text-[11px] text-[#d8c4a8] font-medium cursor-move"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(14, 10, 24, 0.85) 0%, rgba(14, 10, 24, 0.4) 70%, transparent 100%)",
+        }}
         onPointerDown={(e) => {
           setDragging({
             dx: e.clientX - position.x,
@@ -89,7 +94,7 @@ export function PipSkyView() {
           });
         }}
       >
-        <span>sky · {observerName}</span>
+        <span>Sky · {observerName}</span>
         <button
           type="button"
           aria-label="Close PiP"
@@ -97,19 +102,18 @@ export function PipSkyView() {
             e.stopPropagation();
             close();
           }}
-          className="text-fg-subtle hover:text-fg text-sm leading-none"
+          className={
+            "w-[18px] h-[18px] rounded-full grid place-items-center text-[11px] leading-none " +
+            "bg-accent-400/14 border border-accent-400/30 text-accent-200 " +
+            "hover:bg-accent-400/22 hover:text-accent-50"
+          }
+          style={{ transition: cssTransition("background, color", "fast") }}
         >
-          ✕
+          ×
         </button>
       </div>
-      {/* SkyView's dome fills 87.5% of its 320×320 viewBox — the outer
-          12.5% is reserved for compass labels. To make the dome's outer
-          ring align with the PiP's circular edge, render the SVG ~14%
-          larger than the PiP (inset by negative ~7% on each side). The
-          PiP's rounded-full + overflow-hidden clips the SVG's corners
-          (which are mostly empty viewBox padding); the dome itself sits
-          flush with the PiP edge and remains centered on the PiP's
-          geometric midpoint. */}
+
+      {/* SkyView — inset so dome centers on PiP circle */}
       <div
         className="absolute"
         style={{
@@ -121,11 +125,15 @@ export function PipSkyView() {
       >
         <SkyView />
       </div>
+
+      {/* Resize handle — bigger + thicker stroke */}
       <div
-        className="absolute bottom-1 right-1 w-3 h-3 cursor-nwse-resize z-10"
+        className="absolute bottom-2 right-2 w-4 h-4 cursor-nwse-resize z-10"
         style={{
-          borderRight: "2px solid rgba(120, 180, 240, 0.5)",
-          borderBottom: "2px solid rgba(120, 180, 240, 0.5)",
+          borderRight: "2px solid rgba(255, 174, 96, 0.55)",
+          borderBottom: "2px solid rgba(255, 174, 96, 0.55)",
+          borderRadius: "0 0 3px 0",
+          transition: cssTransition("border-color", "fast"),
         }}
         onPointerDown={(e) => {
           e.stopPropagation();
@@ -135,6 +143,14 @@ export function PipSkyView() {
             startX: e.clientX,
             startY: e.clientY,
           });
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderRightColor = "rgba(255, 174, 96, 0.85)";
+          e.currentTarget.style.borderBottomColor = "rgba(255, 174, 96, 0.85)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderRightColor = "rgba(255, 174, 96, 0.55)";
+          e.currentTarget.style.borderBottomColor = "rgba(255, 174, 96, 0.55)";
         }}
       />
     </div>

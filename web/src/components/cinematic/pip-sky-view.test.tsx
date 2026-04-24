@@ -19,9 +19,13 @@ describe("PipSkyView", () => {
     useSelectionStore.setState({ selectedPassId: null });
   });
 
-  it("renders nothing when closed", () => {
+  it("is aria-hidden + pointer-events-none when closed", () => {
     const { container } = renderWithProviders(<PipSkyView />);
-    expect(container.firstChild).toBeNull();
+    const pip = container.firstChild as HTMLElement;
+    expect(pip).toBeTruthy();
+    expect(pip.getAttribute("aria-hidden")).toBe("true");
+    expect(pip.style.pointerEvents).toBe("none");
+    expect(pip.style.opacity).toBe("0");
   });
 
   it("auto-opens when a pass is selected", () => {
@@ -32,11 +36,13 @@ describe("PipSkyView", () => {
     expect(usePipSkyStore.getState().isOpen).toBe(true);
   });
 
-  it("close button calls close()", async () => {
+  it("close button calls close() and flips aria-hidden", async () => {
     usePipSkyStore.getState().open();
-    renderWithProviders(<PipSkyView />);
+    const { container } = renderWithProviders(<PipSkyView />);
     fireEvent.click(await screen.findByRole("button", { name: /close/i }));
     expect(usePipSkyStore.getState().isOpen).toBe(false);
+    const pip = container.firstChild as HTMLElement;
+    expect(pip.getAttribute("aria-hidden")).toBe("true");
   });
 
   it("renders SkyView inside when open", () => {
