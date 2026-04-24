@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, screen } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
 import { ConfigChips } from "./config-chips";
 import { renderWithProviders } from "@/test/render";
 import { useDraftInputsStore } from "@/store/draft-inputs";
@@ -75,5 +75,20 @@ describe("ConfigChips", () => {
     probe.focus();
     fireEvent.keyDown(probe, { key: "k", metaKey: true });
     expect(screen.queryByTestId("satellite-body-stub")).not.toBeInTheDocument();
+  });
+
+  it("chip label updates inline when draft changes (before Run)", () => {
+    renderWithProviders(<ConfigChips />);
+    // Initial committed = draft — chip shows ISS.
+    expect(screen.getByText("ISS")).toBeInTheDocument();
+    // Simulate the user picking a different satellite in the popover;
+    // this writes to draft, not committed.
+    act(() => {
+      useDraftInputsStore.getState().setDraftSatellite({ query: "STARLINK" });
+    });
+    // Chip should update immediately to the draft value.
+    expect(screen.getByText("STARLINK")).toBeInTheDocument();
+    // And the committed store is unchanged — scene hasn't updated.
+    expect(useSatelliteStore.getState().query).toBe("ISS");
   });
 });
