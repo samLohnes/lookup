@@ -16,10 +16,10 @@ export function PassesPanel() {
 
   return (
     <aside
-      className="fixed right-0 top-[52px] bottom-[60px] w-[360px] bg-bg-raised/90 border-l border-edge backdrop-blur z-10 flex flex-col"
+      className="fixed right-0 top-[52px] bottom-[60px] w-[360px] bg-bg-raised/90 border-l border-edge backdrop-blur z-10 flex flex-col overflow-hidden"
       aria-label="Passes panel"
     >
-      <div className="px-4 pt-3 pb-2 border-b border-accent-400/12">
+      <div className="shrink-0 px-4 pt-3 pb-2 border-b border-accent-400/12">
         <div className="font-serif text-[18px] font-medium text-[#e8d8c0]">
           Passes
         </div>

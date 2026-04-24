@@ -27,7 +27,7 @@ export function PanelTelemetry() {
   const { sample } = useTrackAtCursor();
 
   return (
-    <div className="border-t border-accent-400/12 bg-[rgba(10,8,20,0.35)] p-3.5">
+    <div className="shrink-0 border-t border-accent-400/12 bg-[rgba(10,8,20,0.35)] p-3.5">
       <div className="grid grid-cols-3 gap-x-3.5 gap-y-2.5">
         {CELLS.map(({ label, format, dim }) => {
           const value = sample ? format(sample) : "—";
