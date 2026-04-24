@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { useDisplayTzStore, type DisplayTzMode } from "@/store/display-tz";
 import { useObserverTimezone } from "@/hooks/use-observer-timezone";
 import { clientTimezone, tzOffsetMinutes } from "@/lib/format-time";
@@ -37,16 +36,34 @@ export function DisplayTzToggle() {
     : "Observer";
 
   function render(m: DisplayTzMode, label: string, disabled = false) {
+    const isActive = mode === m;
     return (
-      <Button
+      <button
         key={m}
-        variant={mode === m ? "default" : "outline"}
-        size="sm"
+        type="button"
         onClick={() => setMode(m)}
         disabled={disabled}
+        className={
+          "px-3 py-1.5 text-xs font-medium rounded-md " +
+          "bg-bg-raised/78 border border-accent-400/18 text-fg-muted " +
+          "backdrop-blur-sm " +
+          "hover:border-accent-400/35 hover:text-fg " +
+          "focus-visible:outline-none focus-visible:shadow-[inset_0_0_0_2px_rgba(255,174,96,0.8)] " +
+          (disabled ? "opacity-50 cursor-not-allowed " : "") +
+          (isActive
+            ? "!bg-accent-400/14 !border-accent-400/50 !text-accent-200 "
+            : "")
+        }
+        style={{
+          transition:
+            "background 180ms cubic-bezier(0.22, 1, 0.36, 1), " +
+            "border-color 180ms cubic-bezier(0.22, 1, 0.36, 1), " +
+            "color 180ms cubic-bezier(0.22, 1, 0.36, 1), " +
+            "box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1)",
+        }}
       >
         {label}
-      </Button>
+      </button>
     );
   }
 
