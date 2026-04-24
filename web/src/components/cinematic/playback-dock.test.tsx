@@ -4,15 +4,14 @@ import { PlaybackDock } from "./playback-dock";
 import { renderWithProviders } from "@/test/render";
 import { useSelectionStore } from "@/store/selection";
 
-// Stub heavy playback children to keep this test focused.
 vi.mock("@/components/playback/play-button", () => ({
-  PlayButton: () => <button type="button">▶</button>,
+  PlayButton: () => <button data-testid="play-button-stub">Play</button>,
 }));
 vi.mock("@/components/playback/scrub-bar", () => ({
-  ScrubBar: () => <div data-testid="scrub-stub" />,
+  ScrubBar: () => <div data-testid="scrub-bar-stub">ScrubBar</div>,
 }));
 vi.mock("@/components/playback/speed-selector", () => ({
-  SpeedSelector: () => <div data-testid="speed-stub" />,
+  SpeedSelector: () => <div data-testid="speed-selector-stub">Speed</div>,
 }));
 
 describe("PlaybackDock", () => {
@@ -20,16 +19,24 @@ describe("PlaybackDock", () => {
     useSelectionStore.setState({ selectedPassId: null });
   });
 
-  it("renders nothing when no pass is selected", () => {
+  it("returns null when no pass is selected", () => {
     const { container } = renderWithProviders(<PlaybackDock />);
     expect(container.firstChild).toBeNull();
   });
 
-  it("renders play + scrub + speed when a pass is selected", () => {
-    useSelectionStore.setState({ selectedPassId: "1" });
+  it("renders play button + scrubber + speed selector when a pass is selected", () => {
+    useSelectionStore.setState({ selectedPassId: "p1" });
     renderWithProviders(<PlaybackDock />);
-    expect(screen.getByRole("button", { name: "▶" })).toBeInTheDocument();
-    expect(screen.getByTestId("scrub-stub")).toBeInTheDocument();
-    expect(screen.getByTestId("speed-stub")).toBeInTheDocument();
+    expect(screen.getByTestId("play-button-stub")).toBeInTheDocument();
+    expect(screen.getByTestId("scrub-bar-stub")).toBeInTheDocument();
+    expect(screen.getByTestId("speed-selector-stub")).toBeInTheDocument();
+  });
+
+  it("does NOT render inline telemetry (alt/el/mag)", () => {
+    useSelectionStore.setState({ selectedPassId: "p1" });
+    renderWithProviders(<PlaybackDock />);
+    expect(screen.queryByText("alt")).not.toBeInTheDocument();
+    expect(screen.queryByText("el")).not.toBeInTheDocument();
+    expect(screen.queryByText("mag")).not.toBeInTheDocument();
   });
 });
