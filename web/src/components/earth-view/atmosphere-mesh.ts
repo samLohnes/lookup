@@ -13,8 +13,11 @@ export function createAtmosphereMesh(earthRadius: number): AtmosphereMeshHandle 
   const geometry = new THREE.SphereGeometry(earthRadius * 1.03, 64, 32);
   const material = new THREE.ShaderMaterial({
     uniforms: {
-      glowColor: { value: new THREE.Color(0x7ab0e0) },
-      intensity: { value: 1.1 },
+      // Cooler blue reads better against the new procedural starfield;
+      // intensity bump compensates for the colour shift so the halo
+      // still carries weight at the limb.
+      glowColor: { value: new THREE.Color(0x6aa5e8) },
+      intensity: { value: 1.4 },
     },
     vertexShader: atmoVert,
     fragmentShader: atmoFrag,
