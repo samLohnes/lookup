@@ -40,8 +40,13 @@ export function PassRail() {
     <aside
       className={`fixed right-0 top-[52px] bottom-[60px] ${widthClass} bg-bg-raised/90 border-l border-edge backdrop-blur z-10 flex flex-col`}
     >
-      <div className="text-xs text-fg-muted uppercase tracking-wider text-center py-2 border-b border-edge/50">
-        Passes ({passes.length})
+      <div className="border-b border-accent-400/12 pb-2 mb-1">
+        <div className="font-serif text-[13px] font-medium text-[#e8d8c0] text-center">
+          Passes
+        </div>
+        <div className="text-[9px] uppercase tracking-[0.12em] text-[#8a7c68] text-center mt-0.5">
+          {passes.length} tonight
+        </div>
       </div>
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
         {passes.map((p: PassItem) => {
@@ -53,11 +58,15 @@ export function PassRail() {
               type="button"
               onClick={() => setSelection(p.id)}
               className={
-                "w-full text-left rounded p-2 text-xs transition-colors " +
+                "w-full text-left rounded-md p-2 text-xs " +
                 (isActive
-                  ? "bg-accent/20 border border-accent text-accent-foreground"
-                  : "bg-bg border border-edge/30 hover:bg-bg-raised text-fg-muted")
+                  ? "bg-accent-400/14 border border-accent-400/40 text-accent-200"
+                  : "bg-white/[0.02] border border-accent-400/8 hover:bg-white/5 hover:border-accent-400/15 text-[#a89a84]")
               }
+              style={{
+                transition:
+                  "background 180ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms cubic-bezier(0.22, 1, 0.36, 1)",
+              }}
             >
               {expanded ? (
                 <div className="space-y-1">
@@ -87,7 +96,11 @@ export function PassRail() {
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
-        className="text-[10px] text-fg-subtle p-2 border-t border-edge/50 hover:bg-bg-raised"
+        className="text-[10px] text-[#8a7c68] p-2 border-t border-accent-400/12 hover:text-accent-200"
+        style={{
+          transition:
+            "color 180ms cubic-bezier(0.22, 1, 0.36, 1)",
+        }}
       >
         {expanded ? "⇥ collapse" : "⇤ expand"}
       </button>
