@@ -194,15 +194,9 @@ export function EarthView() {
     handles.setProgress(cursorIndexFor(samples, cursorUtc));
   }, [cursorUtc, skyTrack.data]);
 
-  // Sync the day/night terminator to the playback cursor while a pass is
-  // selected. Otherwise the lit hemisphere stays at "now" (wall clock) which
-  // is misleading when the user is observing a pass at a different time.
-  useEffect(() => {
-    const handles = handlesRef.current;
-    if (!handles) return;
-    const date = cursorUtc ? new Date(cursorUtc) : new Date();
-    handles.updateSunDirection(date);
-  }, [cursorUtc]);
+  // (Day/night terminator currently disabled — earth renders fully lit. The
+  // sun-direction uniform is still wired through to the shader in case we
+  // re-enable the blend later, but there's no live update here.)
 
   return (
     <div
