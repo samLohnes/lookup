@@ -49,7 +49,12 @@ class TerrainFetcher:
         Args:
             observer: The observation location.
         """
-        key = mask_cache_key(lat=observer.lat, lng=observer.lng, radius_km=self._radius_km)
+        key = mask_cache_key(
+            lat=observer.lat,
+            lng=observer.lng,
+            radius_km=self._radius_km,
+            elevation_m=observer.elevation_m,
+        )
 
         cached_mask = self._mask_cache.load(key)
         if cached_mask is not None:
