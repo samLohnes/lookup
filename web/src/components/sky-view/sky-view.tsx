@@ -10,7 +10,7 @@ export function SkyView() {
   return (
     <svg
       viewBox={`0 0 ${DOME_SIZE} ${DOME_SIZE}`}
-      className="w-full"
+      className="w-full h-full"
       preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label="Sky view — looking up from the observer"
