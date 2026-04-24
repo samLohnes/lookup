@@ -55,23 +55,28 @@ describe("PassRow", () => {
   });
 
   it("applies selected styling when isSelected=true", () => {
-    renderWithProviders(
+    const { container } = renderWithProviders(
       <PassRow pass={mockPass} isExpanded={false} isSelected={true} onToggle={() => {}} />,
     );
-    const btn = screen.getByRole("button");
-    expect(btn.className).toMatch(/accent-400\/45/);
+    const rowContainer = container.firstChild as HTMLElement;
+    expect(rowContainer.className).toMatch(/accent-400\/45/);
   });
 
   it("has aria-expanded reflecting isExpanded", () => {
     const { rerender } = renderWithProviders(
       <PassRow pass={mockPass} isExpanded={false} isSelected={false} onToggle={() => {}} />,
     );
-    expect(screen.getByRole("button").getAttribute("aria-expanded")).toBe("false");
+    // Only one button when collapsed — the header.
+    const headerBefore = screen.getByRole("button");
+    expect(headerBefore.getAttribute("aria-expanded")).toBe("false");
     rerender(
       <PassRow pass={mockPass} isExpanded={true} isSelected={true} onToggle={() => {}} />,
     );
-    // When expanded, PassRowExpanded renders its own ICS button inside this row,
-    // so there are two buttons — the outer row button is the first one.
-    expect(screen.getAllByRole("button")[0].getAttribute("aria-expanded")).toBe("true");
+    // When expanded, ICS button also exists — grab the header by its
+    // aria-expanded attribute specifically.
+    const headerAfter = screen
+      .getAllByRole("button")
+      .find((b) => b.hasAttribute("aria-expanded")) as HTMLElement;
+    expect(headerAfter.getAttribute("aria-expanded")).toBe("true");
   });
 });
