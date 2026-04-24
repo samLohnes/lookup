@@ -35,3 +35,15 @@
     @apply bg-bg-raised border border-edge rounded-card;
   }
 }
+
+/* Respect user's reduced-motion preference across all inline transitions.
+ * Applied globally so any component using MOTION tokens automatically
+ * collapses its transition to near-instant when the user has reduced
+ * motion enabled in their OS accessibility settings. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
