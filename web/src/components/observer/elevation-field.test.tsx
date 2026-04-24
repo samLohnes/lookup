@@ -1,107 +1,84 @@
-import { http, HttpResponse } from "msw";
-import { describe, expect, it } from "vitest";
-import { ElevationField } from "@/components/observer/elevation-field";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { ElevationField } from "./elevation-field";
+import { renderWithProviders } from "@/test/render";
 import { useDraftInputsStore } from "@/store/draft-inputs";
-import { useObserverStore } from "@/store/observer";
-import { server } from "@/test/msw/server";
-import {
-  renderWithProviders,
-  screen,
-  userEvent,
-  waitFor,
-} from "@/test/render";
 
-/** Reset both stores so each test sees a clean slate. */
-function seedDraft(observer: { lat: number; lng: number; elevation_m: number; name: string }) {
-  useObserverStore.setState({ current: observer, saved: [] });
-  useDraftInputsStore.getState().initFromCommitted();
-}
+// Mock the elevation lookup hook with a controllable return.
+const hookState = {
+  data: undefined as { lat: number; lng: number; elevation_m: number } | undefined,
+  isFetching: false,
+  isError: false,
+};
+
+vi.mock("@/hooks/use-observer-elevation", () => ({
+  useObserverElevation: () => hookState,
+}));
 
 describe("ElevationField", () => {
-  it("auto-populates draft.elevation_m from the DEM lookup on first render", async () => {
-    server.use(
-      http.get("/api/geo/elevation", ({ request }) => {
-        const url = new URL(request.url);
-        return HttpResponse.json({
-          lat: Number(url.searchParams.get("lat")),
-          lng: Number(url.searchParams.get("lng")),
-          elevation_m: 4205,
-        });
-      }),
-    );
-    seedDraft({ lat: 19.82, lng: -155.47, elevation_m: 0, name: "Mauna Kea" });
-
-    renderWithProviders(<ElevationField />);
-
-    await waitFor(() =>
-      expect(useDraftInputsStore.getState().draft.observer.elevation_m).toBe(4205),
-    );
+  beforeEach(() => {
+    hookState.data = undefined;
+    hookState.isFetching = false;
+    hookState.isError = false;
+    useDraftInputsStore.getState().initFromCommitted();
+    useDraftInputsStore.getState().setDraftObserver({
+      lat: 19.82, lng: -155.47, elevation_m: 0, name: "Mauna Kea",
+    });
   });
 
-  it("does NOT clobber a user's manual edit after the lookup completes", async () => {
-    server.use(
-      http.get("/api/geo/elevation", () =>
-        HttpResponse.json({ lat: 19.82, lng: -155.47, elevation_m: 4200 }),
-      ),
-    );
-    seedDraft({ lat: 19.82, lng: -155.47, elevation_m: 0, name: "Mauna Kea" });
-
+  it("renders lookup-in-flight state with a 'looking up' chip", () => {
+    hookState.isFetching = true;
     renderWithProviders(<ElevationField />);
-
-    // Wait for the auto-populate to land at 4200.
-    await waitFor(() =>
-      expect(useDraftInputsStore.getState().draft.observer.elevation_m).toBe(4200),
-    );
-
-    // User manually overrides to 4205 (e.g. 5m telescope above peak).
-    const input = screen.getByLabelText(/elevation/i) as HTMLInputElement;
-    await userEvent.clear(input);
-    await userEvent.type(input, "4205");
-
-    expect(useDraftInputsStore.getState().draft.observer.elevation_m).toBe(4205);
-
-    // The query result re-resolving from cache must not overwrite the override.
-    // Wait long enough for any pending effects to flush.
-    await new Promise((r) => setTimeout(r, 50));
-    expect(useDraftInputsStore.getState().draft.observer.elevation_m).toBe(4205);
+    expect(screen.getByText(/looking up/i)).toBeInTheDocument();
   });
 
-  it("shows an unknown-elevation message on lookup failure", async () => {
-    server.use(
-      http.get("/api/geo/elevation", () =>
-        HttpResponse.json({ detail: "DEM fetch failed" }, { status: 502 }),
-      ),
-    );
-    seedDraft({ lat: 89.9, lng: 0, elevation_m: 0, name: "Pole" });
-
+  it("shows the sampled elevation with an 'auto' chip when value matches lookup", () => {
+    hookState.data = { lat: 19.82, lng: -155.47, elevation_m: 4205 };
+    useDraftInputsStore.getState().setDraftObserver({
+      lat: 19.82, lng: -155.47, elevation_m: 4205, name: "Mauna Kea",
+    });
     renderWithProviders(<ElevationField />);
-
-    await waitFor(
-      () => expect(screen.getByText(/elevation unknown/i)).toBeInTheDocument(),
-      { timeout: 5000 },
-    );
+    expect(screen.getByText(/4,205/i)).toBeInTheDocument();
+    expect(screen.getByText(/auto/i)).toBeInTheDocument();
   });
 
-  it("Reset button re-applies the DEM-sampled value", async () => {
-    server.use(
-      http.get("/api/geo/elevation", () =>
-        HttpResponse.json({ lat: 19.82, lng: -155.47, elevation_m: 4200 }),
-      ),
-    );
-    seedDraft({ lat: 19.82, lng: -155.47, elevation_m: 0, name: "Mauna Kea" });
-
+  it("shows 'overridden' chip when draft elevation differs from lookup", () => {
+    hookState.data = { lat: 19.82, lng: -155.47, elevation_m: 4205 };
+    useDraftInputsStore.getState().setDraftObserver({
+      lat: 19.82, lng: -155.47, elevation_m: 4210, name: "Mauna Kea",
+    });
     renderWithProviders(<ElevationField />);
+    expect(screen.getByText(/overridden/i)).toBeInTheDocument();
+  });
 
-    await waitFor(() =>
-      expect(useDraftInputsStore.getState().draft.observer.elevation_m).toBe(4200),
-    );
+  it("Override button expands a numeric input", async () => {
+    hookState.data = { lat: 19.82, lng: -155.47, elevation_m: 4205 };
+    useDraftInputsStore.getState().setDraftObserver({
+      lat: 19.82, lng: -155.47, elevation_m: 4205, name: "Mauna Kea",
+    });
+    renderWithProviders(<ElevationField />);
+    fireEvent.click(screen.getByRole("button", { name: /override/i }));
+    expect(screen.getByRole("spinbutton")).toBeInTheDocument();
+  });
 
-    const input = screen.getByLabelText(/elevation/i) as HTMLInputElement;
-    await userEvent.clear(input);
-    await userEvent.type(input, "9999");
-    expect(useDraftInputsStore.getState().draft.observer.elevation_m).toBe(9999);
+  it("commits override to draft on confirm button", async () => {
+    hookState.data = { lat: 19.82, lng: -155.47, elevation_m: 4205 };
+    useDraftInputsStore.getState().setDraftObserver({
+      lat: 19.82, lng: -155.47, elevation_m: 4205, name: "Mauna Kea",
+    });
+    renderWithProviders(<ElevationField />);
+    fireEvent.click(screen.getByRole("button", { name: /override/i }));
+    const input = screen.getByRole("spinbutton") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "4300" } });
+    fireEvent.click(screen.getByRole("button", { name: /confirm/i }));
+    await waitFor(() => {
+      expect(useDraftInputsStore.getState().draft.observer.elevation_m).toBe(4300);
+    });
+  });
 
-    await userEvent.click(screen.getByRole("button", { name: /reset/i }));
-    expect(useDraftInputsStore.getState().draft.observer.elevation_m).toBe(4200);
+  it("shows unknown state when lookup errors", () => {
+    hookState.isError = true;
+    renderWithProviders(<ElevationField />);
+    expect(screen.getByText(/unknown/i)).toBeInTheDocument();
   });
 });
