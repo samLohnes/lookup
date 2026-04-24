@@ -25,21 +25,30 @@ export default {
         // Functional accents — cool satellite track + warm observer pin
         satellite: "#9ec5ff",
         observer: "#ffb347",
+        // Observatory accent — amber-gold cluster applied across active
+        // states, focus rings, pass rail highlights, PiP chrome. Matches
+        // the existing satellite-marker orange.
+        accent: {
+          50: "#fff5e6",
+          200: "#ffdcaa",
+          400: "#ffae60",
+          500: "#ff9650",
+        },
         // Semantic
         danger: "#ff6b6b",
         success: "#6fcf97",
       },
       fontFamily: {
         sans: [
+          "Inter",
           "-apple-system",
           "BlinkMacSystemFont",
           "SF Pro Display",
-          "Inter",
           "system-ui",
           "sans-serif",
         ],
-        serif: ["Georgia", "Times New Roman", "serif"],
-        mono: ["SF Mono", "Menlo", "Consolas", "monospace"],
+        serif: ["Fraunces", "Georgia", "Times New Roman", "serif"],
+        mono: ["JetBrains Mono", "SF Mono", "Menlo", "Consolas", "monospace"],
       },
       fontSize: {
         // Tighter tracking for small-caps labels
