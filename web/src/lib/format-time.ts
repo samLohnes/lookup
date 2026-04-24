@@ -85,3 +85,82 @@ export function tzOffsetMinutes(
   };
   return Math.round((inZone(a) - inZone(b)) / 60000);
 }
+
+/** Extract a date's Y-M-D in a given tz as a stable comparison key. */
+function ymdInTz(iso: string, tz: string): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date(iso));
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+/** Extract a date's hour (0-23) in a given tz. */
+function hourInTz(iso: string, tz: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    hour: "2-digit", hour12: false,
+  }).formatToParts(new Date(iso));
+  const h = Number(parts.find((p) => p.type === "hour")?.value ?? 0);
+  return h === 24 ? 0 : h;
+}
+
+/** Format an hour-minute in compact style: "6p", "6:30a", "12p". */
+function compactHourMinute(iso: string, tz: string): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    hour: "numeric", minute: "2-digit", hour12: true,
+  }).formatToParts(new Date(iso));
+  const hour = parts.find((p) => p.type === "hour")?.value ?? "";
+  const minute = parts.find((p) => p.type === "minute")?.value ?? "";
+  const period = (parts.find((p) => p.type === "dayPeriod")?.value ?? "")
+    .toLowerCase()
+    .charAt(0); // 'a' or 'p'
+  if (minute === "00") return `${hour}${period}`;
+  return `${hour}:${minute}${period}`;
+}
+
+/** Format a window (start, end) for the config chip value slot.
+ *  "Tonight 6p–6a" if the window starts today (display tz) and ends
+ *  before noon the next day. Otherwise "Apr 24 · 6p–6a". */
+export function formatWindowChip(
+  startIso: string,
+  endIso: string,
+  mode: DisplayTzMode,
+  observerTimezone: string | null,
+): string {
+  const tz = resolveDisplayTimezone(mode, observerTimezone);
+  const startYmd = ymdInTz(startIso, tz);
+  const endYmd = ymdInTz(endIso, tz);
+  const endHour = hourInTz(endIso, tz);
+
+  const startTime = compactHourMinute(startIso, tz);
+  const endTime = compactHourMinute(endIso, tz);
+
+  // "Tonight" rule: same-day start, end is either same-day or next-day before noon.
+  const sameDay = startYmd === endYmd;
+  const nextDayBeforeNoon =
+    !sameDay &&
+    endHour < 12 &&
+    dayDiff(startYmd, endYmd) === 1;
+
+  if (sameDay || nextDayBeforeNoon) {
+    return `Tonight ${startTime}–${endTime}`;
+  }
+
+  const dateLabel = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    month: "short", day: "numeric",
+  }).format(new Date(startIso));
+  return `${dateLabel} · ${startTime}–${endTime}`;
+}
+
+/** Day difference between two YYYY-MM-DD strings (a minus b). */
+function dayDiff(a: string, b: string): number {
+  const [ay, am, ad] = a.split("-").map(Number);
+  const [by, bm, bd] = b.split("-").map(Number);
+  const aMs = Date.UTC(ay, am - 1, ad);
+  const bMs = Date.UTC(by, bm - 1, bd);
+  return Math.round((bMs - aMs) / 86_400_000);
+}
