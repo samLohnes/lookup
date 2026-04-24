@@ -5,10 +5,12 @@ Runs entirely on your machine: skyfield + FastAPI backend, React + Three.js
 frontend, zero cloud dependencies beyond free data sources (Celestrak TLEs,
 OpenTopography DEM tiles, OSM map tiles).
 
-**Version:** v0.5.0 — functionally complete v1 baseline. Cinematic polish
-(atmosphere shader, motion design, starfield, richer typography) and a few
-deferred feature items (magnitude filter UI, ground-track line, user-drawn
-horizon) are planned as follow-on milestones.
+**Version:** v0.6.0 — adds cinematic mode: a full-viewport 3D earth hero
+with drawer-based controls, a resizable picture-in-picture sky view, and
+commit-then-query inputs. Researchers can toggle to the classic 3-column
+layout at any time via the top-right chrome. Remaining polish items
+(atmosphere shader refinement, motion design, richer typography, magnitude
+filter UI, user-drawn horizon) are planned as follow-on milestones.
 
 ![Earth view with playback](docs/screenshots/earth-view.png)
 
@@ -26,8 +28,10 @@ range, and get:
 - **A timeline strip** showing every pass in the window at a glance.
 - **A sky view** — alt-azimuth dome with terrain silhouette, predicted pass
   arc, and a playback cursor you can scrub through the arc.
-- **A 3D earth view** — Blue Marble globe with observer pin and satellite
-  marker, swappable with the sky view as the right-column hero.
+- **A 3D earth view** — full-viewport globe in cinematic mode (with
+  ground-track line, drag-to-rotate camera, pass-selection reframe) or
+  as a side panel in research mode. Automatic observer-elevation lookup
+  so mountain locations (Mauna Kea, Everest) compute passes correctly.
 - **Live telemetry** — altitude, range, velocity, az/el, magnitude, sunlit,
   observer-dark — bound to the playback cursor at 1×, 10×, or 60× speed.
 - **ICS calendar export** per pass.
