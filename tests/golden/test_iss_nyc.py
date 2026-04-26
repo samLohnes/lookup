@@ -68,3 +68,9 @@ def test_iss_nyc_24h_matches_hand_verified(timescale):
         assert abs(got.peak.position.elevation_deg - exp["peak_el"]) <= ANGLE_TOLERANCE_DEG
         assert abs(got.rise.position.azimuth_deg - exp["rise_az"]) <= ANGLE_TOLERANCE_DEG
         assert abs(got.set.position.azimuth_deg - exp["set_az"]) <= ANGLE_TOLERANCE_DEG
+
+        # New field assertions added in v0.8.x re-baseline.
+        assert abs(got.rise.range_km - exp["rise_range_km"]) <= 1.0
+        assert abs(got.peak.range_km - exp["peak_range_km"]) <= 1.0
+        assert abs(got.set.range_km - exp["set_range_km"]) <= 1.0
+        assert abs(got.peak_angular_speed_deg_s - exp["peak_angular_speed_deg_s"]) <= 0.01
