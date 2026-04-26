@@ -3,7 +3,7 @@ import { fireEvent, screen } from "@testing-library/react";
 import { PassList } from "./pass-list";
 import { renderWithProviders } from "@/test/render";
 import { useSelectionStore } from "@/store/selection";
-import type { PassResponse } from "@/types/api";
+import type { PassResponse, TrainPassResponse } from "@/types/api";
 
 const p = (id: string, peakAz: number, peakEl: number): PassResponse => ({
   kind: "single",
@@ -70,6 +70,43 @@ describe("PassList", () => {
     expect(rows[0].getAttribute("aria-expanded")).toBe("false");
     expect(rows[1].getAttribute("aria-expanded")).toBe("true");
     expect(useSelectionStore.getState().selectedPassId).toBe("b");
+  });
+
+  it("renders train passes (kind === 'train') without crashing", () => {
+    const trainPass: TrainPassResponse = {
+      kind: "train",
+      id: "train-20260426220000",
+      name: "STARLINK train (5 objects)",
+      member_norad_ids: [90001, 90002, 90003, 90004, 90005],
+      rise: {
+        time: "2026-04-26T22:00:00Z",
+        azimuth_deg: 180,
+        elevation_deg: 0,
+        range_km: 1500,
+      },
+      peak: {
+        time: "2026-04-26T22:04:00Z",
+        azimuth_deg: 180,
+        elevation_deg: 60,
+        range_km: 500,
+      },
+      set: {
+        time: "2026-04-26T22:08:00Z",
+        azimuth_deg: 180,
+        elevation_deg: 0,
+        range_km: 1500,
+      },
+      duration_s: 480,
+      max_magnitude: -1.0,
+      member_count: 5,
+    };
+    (useCurrentPasses as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: { passes: [trainPass] },
+    });
+    renderWithProviders(<PassList />);
+    // Header button renders for the train pass — peak elevation shown in row.
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(screen.getByText(/peaks 60°/)).toBeInTheDocument();
   });
 
   it("clicking an expanded row collapses it but keeps selection", () => {
