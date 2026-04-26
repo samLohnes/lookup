@@ -50,7 +50,9 @@ export function SatelliteSearchBody({ onSelect }: SatelliteSearchBodyProps) {
                 }}
               >
                 <span className="flex-1">{hit.display_name}</span>
-                <span className="text-xs text-fg-muted">{hit.match_type}</span>
+                <span className="text-xs text-fg-muted">
+                  {hit.match_type === "train_query" ? "trains" : hit.match_type}
+                </span>
               </CommandItem>
             ))}
           </CommandGroup>
