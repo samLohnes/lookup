@@ -20,6 +20,7 @@ from core._types import (
     TLE,
 )
 from core.orbital.refraction import (
+    HORIZON_REFRACTION_DEG,
     STANDARD_PRESSURE_MBAR,
     STANDARD_TEMPERATURE_C,
 )
@@ -101,7 +102,12 @@ def predict_passes(
     t0 = timescale.from_datetime(start.astimezone(timezone.utc))
     t1 = timescale.from_datetime(end.astimezone(timezone.utc))
 
-    times, events = satellite.find_events(topos, t0, t1, altitude_degrees=min_elevation_deg)
+    # Horizon-depression offset: rise/set events fire at the apparent horizon,
+    # not the geometric horizon. ~34 arc-minutes lower in geometric terms.
+    times, events = satellite.find_events(
+        topos, t0, t1,
+        altitude_degrees=min_elevation_deg - HORIZON_REFRACTION_DEG,
+    )
 
     passes: list[Pass] = []
     pending_rise: tuple[datetime, AngularPosition] | None = None
