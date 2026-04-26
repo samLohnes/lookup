@@ -96,6 +96,7 @@ def post_passes(
         tle_passes = predict_passes(
             tle, observer, req.from_utc, req.to_utc,
             timescale=timescale,
+            ephemeris=ephemeris,
             horizon_mask=horizon,
         )
         filtered = filter_passes(
