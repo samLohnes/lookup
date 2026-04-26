@@ -72,7 +72,7 @@ export interface HorizonResponse {
 
 export interface CatalogHitResponse {
   display_name: string;
-  match_type: "satellite" | "group";
+  match_type: "satellite" | "group" | "train_query";
   norad_ids: number[];
   score: number;
 }
