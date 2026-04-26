@@ -89,10 +89,7 @@ export function PassRowExpanded({ pass }: PassRowExpandedProps) {
       </Section>
 
       <Section label="Orbital">
-        <KV
-          k="Range peak"
-          v={pass.kind === "single" ? `${pass.peak.range_km.toFixed(0)} km` : "—"}
-        />
+        <KV k="Range peak" v={`${pass.peak.range_km.toFixed(0)} km`} />
         <KV
           k="Ang. speed"
           v={
