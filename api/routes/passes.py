@@ -22,6 +22,7 @@ from core.catalog.search import DEFAULT_CATALOG, resolve
 from core.orbital.passes import predict_passes
 from core.terrain.fetcher import TerrainFetcher
 from core.trains.clustering import group_into_trains
+from core.trains.discovery import discover_trains
 from core.visibility.filter import filter_passes
 
 router = APIRouter()
@@ -79,8 +80,30 @@ def post_passes(
     observer = _observer_from_request(req)
     horizon = terrain.get_horizon_mask(observer)
 
-    tles: list[TLE] = []
+    all_passes: list[Pass] = []
     ages: list[float] = []
+    items: list[Union[PassResponse, TrainPassResponse]] = []
+
+    if resolution.type == "train_query":
+        train_passes = discover_trains(
+            query_kind=resolution.query_kind,
+            observer=observer,
+            start=req.from_utc,
+            end=req.to_utc,
+            tle_fetcher=tle_fetcher,
+            timescale=timescale,
+            ephemeris=ephemeris,
+            horizon_mask=horizon,
+        )
+        items = [trainpass_to_response(tp) for tp in train_passes]
+        return PassesResponse(
+            query=req.query,
+            resolved_name=resolution.display_name,
+            passes=items,
+            tle_age_seconds=None,
+        )
+
+    tles: list[TLE] = []
     if resolution.type == "single":
         tle, age = tle_fetcher.get_tle(resolution.norad_ids[0])
         tles.append(tle)
@@ -91,7 +114,6 @@ def post_passes(
         tles.extend(t for t in group_tles if t.norad_id in wanted)
         ages.append(age)
 
-    all_passes: list[Pass] = []
     for tle in tles:
         tle_passes = predict_passes(
             tle, observer, req.from_utc, req.to_utc,
@@ -121,7 +143,6 @@ def post_passes(
 
     grouped = group_into_trains(all_passes) if is_group else all_passes
 
-    items: list[Union[PassResponse, TrainPassResponse]] = []
     for event in grouped:
         if isinstance(event, Pass):
             items.append(pass_to_response(event))
