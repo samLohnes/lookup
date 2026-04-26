@@ -39,10 +39,11 @@ class AngularPosition:
 
 @dataclass(frozen=True, slots=True)
 class PassEndpoint:
-    """A single (time, sky-position) event within a pass (rise/peak/set)."""
+    """A single (time, sky-position, range) event within a pass (rise/peak/set)."""
 
     time: datetime
     position: AngularPosition
+    range_km: float
 
 
 @dataclass(frozen=True, slots=True)
