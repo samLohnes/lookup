@@ -56,6 +56,13 @@ def discover_trains(
     Returns:
         list[TrainPass], possibly empty. Single-sat clusters from
         group_into_trains are dropped — only true trains are returned.
+
+    Note:
+        Geometric-only — visibility mode (line-of-sight vs naked-eye) and
+        magnitude/elevation thresholds are NOT applied. Per-member filtering
+        would silently drop trains whose sats span a brightness range; the
+        caller is responsible for choosing a window where trains are
+        meaningfully visible.
     """
     if query_kind not in _GROUP_FOR:
         raise ValueError(f"unknown train query_kind: {query_kind!r}")
