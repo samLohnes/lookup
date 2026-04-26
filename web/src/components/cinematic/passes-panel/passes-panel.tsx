@@ -1,5 +1,6 @@
 import { useSelectionStore } from "@/store/selection";
 import { useCurrentPasses } from "@/hooks/use-current-passes";
+import { EmptyTrains } from "./empty-trains";
 import { PassList } from "./pass-list";
 import { PanelSkyView } from "./panel-sky-view";
 import { PanelTelemetry } from "./panel-telemetry";
@@ -11,8 +12,11 @@ import { PanelTelemetry } from "./panel-telemetry";
 export function PassesPanel() {
   const selectedPassId = useSelectionStore((s) => s.selectedPassId);
   const { data } = useCurrentPasses();
-  const count = data?.passes.length ?? 0;
+  const passes = data?.passes ?? [];
+  const count = passes.length;
   const hasSelection = selectedPassId !== null;
+  const isEmptyTrainQuery =
+    data?.resolved_name === "starlink (trains)" && count === 0;
 
   return (
     <aside
@@ -27,7 +31,7 @@ export function PassesPanel() {
           {count} tonight
         </div>
       </div>
-      <PassList />
+      {isEmptyTrainQuery ? <EmptyTrains /> : <PassList />}
       {hasSelection && <PanelSkyView />}
       {hasSelection && <PanelTelemetry />}
     </aside>
