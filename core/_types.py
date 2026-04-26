@@ -144,18 +144,20 @@ class CatalogHit:
     """One fuzzy-search result with its match score."""
 
     display_name: str
-    match_type: Literal["satellite", "group"]
+    match_type: Literal["satellite", "group", "train_query"]
     norad_ids: tuple[int, ...]
     score: float  # 0..100 from rapidfuzz
+    query_kind: Optional[str] = None
 
 
 @dataclass(frozen=True, slots=True)
 class Resolution:
     """The resolved interpretation of a user query."""
 
-    type: Literal["single", "group"]
+    type: Literal["single", "group", "train_query"]
     norad_ids: tuple[int, ...]
     display_name: str
+    query_kind: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
