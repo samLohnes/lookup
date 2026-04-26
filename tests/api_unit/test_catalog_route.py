@@ -23,12 +23,18 @@ def test_catalog_search_returns_iss_for_iss_query():
     assert 25544 in hits[0]["norad_ids"]
 
 
-def test_catalog_search_returns_group_for_starlink_query():
+def test_catalog_search_returns_group_for_stations_query():
     with _client() as c:
-        r = c.get("/catalog/search", params={"q": "starlink"})
+        r = c.get("/catalog/search", params={"q": "stations"})
     assert r.status_code == 200
     hits = r.json()
-    assert any(h["match_type"] == "group" and h["display_name"] == "starlink" for h in hits)
+    group_hit = next(
+        (h for h in hits if h["match_type"] == "group" and h["display_name"] == "stations"),
+        None,
+    )
+    assert group_hit is not None, "expected stations group hit"
+    assert 25544 in group_hit["norad_ids"]
+    assert 48274 in group_hit["norad_ids"]
 
 
 def test_catalog_search_empty_query_returns_empty_list():
