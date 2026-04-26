@@ -110,26 +110,26 @@ def predict_passes(
     )
 
     passes: list[Pass] = []
-    pending_rise: tuple[datetime, AngularPosition] | None = None
-    pending_peak: tuple[datetime, AngularPosition] | None = None
+    pending_rise: tuple[datetime, AngularPosition, float] | None = None
+    pending_peak: tuple[datetime, AngularPosition, float] | None = None
 
     for t, e in zip(times, events):
         dt = t.utc_datetime().replace(tzinfo=timezone.utc)
         pos, range_km = _observe_altaz_with_range(satellite, topos, t)
 
         if e == EVENT_RISE:
-            pending_rise = (dt, pos)
+            pending_rise = (dt, pos, range_km)
             pending_peak = None
         elif e == EVENT_CULMINATE:
-            pending_peak = (dt, pos)
+            pending_peak = (dt, pos, range_km)
         elif e == EVENT_SET:
             if pending_rise is None or pending_peak is None:
                 # Partial pass at window boundary — skip.
                 pending_rise = None
                 pending_peak = None
                 continue
-            rise_dt, rise_pos = pending_rise
-            peak_dt, peak_pos = pending_peak
+            rise_dt, rise_pos, rise_range = pending_rise
+            peak_dt, peak_pos, peak_range = pending_peak
 
             if horizon_mask is not None and not _passes_above_horizon_mask(peak_pos, horizon_mask):
                 pending_rise = None
@@ -142,9 +142,9 @@ def predict_passes(
                     id=_pass_id(tle.norad_id, rise_dt),
                     norad_id=tle.norad_id,
                     name=tle.name,
-                    rise=PassEndpoint(time=rise_dt, position=rise_pos),
-                    peak=PassEndpoint(time=peak_dt, position=peak_pos),
-                    set=PassEndpoint(time=dt, position=pos),
+                    rise=PassEndpoint(time=rise_dt, position=rise_pos, range_km=rise_range),
+                    peak=PassEndpoint(time=peak_dt, position=peak_pos, range_km=peak_range),
+                    set=PassEndpoint(time=dt, position=pos, range_km=range_km),
                     duration_s=duration,
                     max_magnitude=None,   # populated by visibility.filter_passes
                     sunlit_fraction=0.0,  # populated by visibility.filter_passes
