@@ -96,7 +96,7 @@ class CatalogHitResponse(BaseModel):
     """A single fuzzy-search result from the satellite catalog."""
 
     display_name: str
-    match_type: Literal["satellite", "group"]
+    match_type: Literal["satellite", "group", "train_query"]
     norad_ids: list[int]
     score: float
 
