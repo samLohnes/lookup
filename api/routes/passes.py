@@ -85,6 +85,12 @@ def post_passes(
     items: list[Union[PassResponse, TrainPassResponse]] = []
 
     if resolution.type == "train_query":
+        # train_query is geometric-only: naked-eye / line-of-sight mode and
+        # min_magnitude / min_peak_elevation_deg are intentionally ignored.
+        # Per-pass filtering would silently drop trains whose member sats
+        # span a brightness range — partial breakage we'd rather not paper
+        # over. If a user picks naked-eye and gets a daytime train, they
+        # can switch to line-of-sight or wait for night passes.
         train_passes = discover_trains(
             query_kind=resolution.query_kind,
             observer=observer,
