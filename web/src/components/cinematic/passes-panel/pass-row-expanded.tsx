@@ -77,13 +77,30 @@ export function PassRowExpanded({ pass }: PassRowExpandedProps) {
 
       <Section label="Visibility">
         <KV k="Peak mag" v={magText} />
-        <KV k="Visible" v="—" />
+        <KV
+          k="Visible"
+          v={
+            pass.kind !== "single" || pass.naked_eye_visible === null
+              ? "—"
+              : pass.naked_eye_visible
+          }
+        />
         <KV k="Sunlit" v={sunlitText} />
       </Section>
 
       <Section label="Orbital">
-        <KV k="Range peak" v="—" />
-        <KV k="Ang. speed" v="—" />
+        <KV
+          k="Range peak"
+          v={pass.kind === "single" ? `${pass.peak.range_km.toFixed(0)} km` : "—"}
+        />
+        <KV
+          k="Ang. speed"
+          v={
+            pass.kind === "single"
+              ? `${pass.peak_angular_speed_deg_s.toFixed(2)}°/s`
+              : "—"
+          }
+        />
         <KV k="Satellite" v={satelliteText} />
       </Section>
 
