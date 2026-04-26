@@ -39,10 +39,11 @@ class AngularPosition:
 
 @dataclass(frozen=True, slots=True)
 class PassEndpoint:
-    """A single (time, sky-position) event within a pass (rise/peak/set)."""
+    """A single (time, sky-position, range) event within a pass (rise/peak/set)."""
 
     time: datetime
     position: AngularPosition
+    range_km: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,9 +78,10 @@ class BlockedAzimuthRange:
 class Pass:
     """A visibility window for a single satellite over a single observer.
 
-    Geometric info (rise/peak/set) is always present. Optical info
-    (max_magnitude, sunlit_fraction) is populated when visibility mode
-    was computed — may be None for pure line-of-sight queries.
+    Geometric info (rise/peak/set, range, peak angular speed) is always
+    present. Optical info (max_magnitude, sunlit_fraction, naked_eye_visible)
+    is populated when visibility mode was computed — may be None for pure
+    line-of-sight queries.
     """
 
     id: str
@@ -92,6 +94,8 @@ class Pass:
     max_magnitude: Optional[float]
     sunlit_fraction: float
     tle_epoch: datetime
+    peak_angular_speed_deg_s: float = 0.0
+    naked_eye_visible: Optional[Literal["yes", "no", "partial"]] = None
     terrain_blocked_ranges: tuple[BlockedAzimuthRange, ...] = field(default_factory=tuple)
 
 
