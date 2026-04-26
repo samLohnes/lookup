@@ -16,15 +16,21 @@ from core._types import CatalogHit, Resolution
 
 @dataclass(frozen=True, slots=True)
 class CatalogIndex:
-    """An index of satellite names and group labels.
+    """An index of satellite names, group labels, and train queries.
 
     Args:
         satellites: Tuple of (display_name, norad_id) pairs.
         groups: Tuple of (group_name, tuple_of_norad_ids) pairs.
+            Static curated sets (e.g. "stations") whose membership rarely
+            changes.
+        train_queries: Tuple of (display_name, query_kind) pairs. Each
+            represents a dynamic phenomenon (e.g. currently-active
+            Starlink trains) resolved at query time by core.trains.discovery.
     """
 
     satellites: tuple[tuple[str, int], ...]
     groups: tuple[tuple[str, tuple[int, ...]], ...]
+    train_queries: tuple[tuple[str, str], ...] = ()
 
 
 # Small, hand-curated catalog for M1. Covers the most common queries
@@ -44,9 +50,11 @@ DEFAULT_CATALOG = CatalogIndex(
     ),
     groups=(
         ("stations", (25544, 48274)),
-        ("starlink", (44713, 44714, 44715, 44716, 44717)),
         ("weather", (33591,)),
         ("earth-observation", (39084, 25994, 27424, 27386)),
+    ),
+    train_queries=(
+        ("starlink (trains)", "starlink"),
     ),
 )
 
@@ -71,10 +79,7 @@ def fuzzy_search(query: str, *, catalog: CatalogIndex, limit: int = 10) -> list[
 
     Exact NORAD-ID matches (digits only) are returned immediately with score 100.
 
-    Args:
-        query: User input. Whitespace is trimmed. Empty → no hits.
-        catalog: Index to search.
-        limit: Maximum hits to return.
+    Within equal-score hits, train_query > group > satellite for sort priority.
     """
     q = query.strip()
     if not q:
@@ -93,7 +98,6 @@ def fuzzy_search(query: str, *, catalog: CatalogIndex, limit: int = 10) -> list[
                         score=100.0,
                     )
                 ]
-        # No-name catalog match — still return the NORAD as a satellite hit
         return [
             CatalogHit(
                 display_name=f"NORAD {norad}",
@@ -139,26 +143,43 @@ def fuzzy_search(query: str, *, catalog: CatalogIndex, limit: int = 10) -> list[
             )
         )
 
-    candidates.sort(key=lambda h: h.score, reverse=True)
+    # Fuzzy over train_query names
+    train_names = [t[0] for t in catalog.train_queries]
+    train_ranked = process.extract(
+        q, train_names, scorer=fuzz.WRatio, processor=default_process,
+        limit=limit, score_cutoff=60,
+    )
+    for display_name, score, idx in train_ranked:
+        _, query_kind = catalog.train_queries[idx]
+        candidates.append(
+            CatalogHit(
+                display_name=display_name,
+                match_type="train_query",
+                norad_ids=(),
+                score=float(score),
+                query_kind=query_kind,
+            )
+        )
+
+    # Sort: descending score; train_query > group > satellite at equal score.
+    _PRIORITY = {"train_query": 0, "group": 1, "satellite": 2}
+    candidates.sort(key=lambda h: (-h.score, _PRIORITY[h.match_type]))
     return candidates[:limit]
 
 
 def resolve(query: str, *, catalog: CatalogIndex) -> Resolution:
-    """Resolve a query to a single/group interpretation.
+    """Resolve a query to a single/group/train_query interpretation.
 
     Picks the best hit from `fuzzy_search`. Raises `LookupError` if no hits.
-
-    Args:
-        query: User input string.
-        catalog: Index to search.
     """
     hits = fuzzy_search(query, catalog=catalog)
     if not hits:
         raise LookupError(f"no match for query: {query!r}")
     best = hits[0]
-    resolution_type = "single" if best.match_type == "satellite" else "group"
+    type_map = {"satellite": "single", "group": "group", "train_query": "train_query"}
     return Resolution(
-        type=resolution_type,
+        type=type_map[best.match_type],
         norad_ids=best.norad_ids,
         display_name=best.display_name,
+        query_kind=best.query_kind,
     )

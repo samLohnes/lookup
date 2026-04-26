@@ -24,17 +24,19 @@ def test_fuzzy_search_partial_name():
     assert any("HUBBLE" in h.display_name.upper() for h in hits)
 
 
-def test_fuzzy_search_group_starlink():
+def test_fuzzy_search_starlink_resolves_to_train_query():
+    """'starlink' now matches the new train_query entry, not the old group."""
     hits = fuzzy_search("starlink", catalog=DEFAULT_CATALOG)
-    group_hits = [h for h in hits if h.match_type == "group"]
-    assert group_hits, "expected at least one group hit"
-    assert any(h.display_name == "starlink" for h in group_hits)
+    train_hits = [h for h in hits if h.match_type == "train_query"]
+    assert train_hits, "expected at least one train_query hit"
+    assert train_hits[0].display_name == "starlink (trains)"
+    assert train_hits[0].query_kind == "starlink"
 
 
 def test_fuzzy_search_typo_resolves():
-    # "stalink" -> "starlink"
+    # "stalink" -> "starlink (trains)"
     hits = fuzzy_search("stalink", catalog=DEFAULT_CATALOG)
-    assert any(h.display_name == "starlink" for h in hits)
+    assert any(h.display_name == "starlink (trains)" for h in hits)
 
 
 def test_fuzzy_search_norad_id_exact():
@@ -60,11 +62,21 @@ def test_resolve_single():
     assert r.display_name == "ISS (ZARYA)"
 
 
-def test_resolve_group():
-    r = resolve("starlink", catalog=DEFAULT_CATALOG)
+def test_resolve_group_stations():
+    """Stations is still a (small, curated) group."""
+    r = resolve("stations", catalog=DEFAULT_CATALOG)
     assert r.type == "group"
     assert len(r.norad_ids) >= 2
-    assert r.display_name == "starlink"
+    assert r.display_name == "stations"
+
+
+def test_resolve_train_query_starlink():
+    """Starlink is now a train_query, not a group."""
+    r = resolve("starlink", catalog=DEFAULT_CATALOG)
+    assert r.type == "train_query"
+    assert r.display_name == "starlink (trains)"
+    assert r.query_kind == "starlink"
+    assert r.norad_ids == ()  # discovery resolves at query time, not catalog time
 
 
 def test_resolve_no_match_raises():
@@ -78,6 +90,7 @@ def test_catalog_index_allows_custom_catalog():
             ("FOO SAT", 12345),
         ),
         groups=(),
+        train_queries=(),
     )
     hits = fuzzy_search("foo", catalog=custom)
     assert hits[0].norad_ids == (12345,)
