@@ -19,22 +19,37 @@ from core._types import (
     PassEndpoint,
     TLE,
 )
+from core.orbital.refraction import (
+    STANDARD_PRESSURE_MBAR,
+    STANDARD_TEMPERATURE_C,
+)
 
 EVENT_RISE = 0
 EVENT_CULMINATE = 1
 EVENT_SET = 2
 
 
-def _observe_altaz(
+def _observe_altaz_with_range(
     satellite: EarthSatellite,
     topos,
     t,
-) -> AngularPosition:
-    """Return AngularPosition (az_deg, el_deg) of `satellite` from `topos` at `t`."""
+) -> tuple[AngularPosition, float]:
+    """Return (AngularPosition, range_km) of `satellite` from `topos` at `t`.
+
+    Altitude is refracted (Bennett's formula via skyfield) using sea-level
+    standard atmosphere. Range comes from the same topocentric solve.
+    """
     difference = satellite - topos
     topocentric = difference.at(t)
-    alt, az, _ = topocentric.altaz()
-    return AngularPosition(azimuth_deg=float(az.degrees) % 360.0, elevation_deg=float(alt.degrees))
+    alt, az, dist = topocentric.altaz(
+        pressure_mbar=STANDARD_PRESSURE_MBAR,
+        temperature_C=STANDARD_TEMPERATURE_C,
+    )
+    pos = AngularPosition(
+        azimuth_deg=float(az.degrees) % 360.0,
+        elevation_deg=float(alt.degrees),
+    )
+    return pos, float(dist.km)
 
 
 def _pass_id(norad_id: int, rise_time: datetime) -> str:
@@ -94,7 +109,7 @@ def predict_passes(
 
     for t, e in zip(times, events):
         dt = t.utc_datetime().replace(tzinfo=timezone.utc)
-        pos = _observe_altaz(satellite, topos, t)
+        pos, range_km = _observe_altaz_with_range(satellite, topos, t)
 
         if e == EVENT_RISE:
             pending_rise = (dt, pos)
