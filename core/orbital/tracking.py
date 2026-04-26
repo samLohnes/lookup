@@ -18,7 +18,7 @@ from core.orbital.refraction import (
     STANDARD_TEMPERATURE_C,
 )
 from core.visibility.darkness import is_observer_in_darkness
-from core.visibility.magnitude import ISS_INTRINSIC_MAGNITUDE, compute_magnitude
+from core.visibility.magnitude import DEFAULT_INTRINSIC_MAGNITUDE, compute_magnitude
 
 
 def _phase_angle_deg(topocentric, sun_apparent) -> float:
@@ -56,7 +56,7 @@ def sample_track(
     timescale: Timescale,
     ephemeris: SpiceKernel,
     dt_seconds: int = 1,
-    intrinsic_magnitude: float = ISS_INTRINSIC_MAGNITUDE,
+    intrinsic_magnitude: float = DEFAULT_INTRINSIC_MAGNITUDE,
 ) -> list[TrackSample]:
     """Sample a satellite's track at `dt_seconds` intervals.
 
@@ -68,7 +68,11 @@ def sample_track(
         timescale: Skyfield Timescale.
         ephemeris: Planetary ephemeris (for sun position + sunlit test).
         dt_seconds: Sampling interval in seconds.
-        intrinsic_magnitude: Used by `compute_magnitude`. Defaults to ISS.
+        intrinsic_magnitude: Used by `compute_magnitude`. Defaults to
+            `DEFAULT_INTRINSIC_MAGNITUDE` (4.0) — a conservative dim
+            fallback. Callers should pass an explicit value (e.g.
+            `ISS_INTRINSIC_MAGNITUDE`) when the satellite is known to
+            be brighter than the default.
 
     Returns:
         List of `TrackSample`, earliest first. Empty if `start >= end`.
