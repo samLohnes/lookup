@@ -62,7 +62,7 @@ def test_sample_track_default_intrinsic_is_conservative(timescale, ephemeris, is
     assigned ISS brightness. With the new default, sunlit ISS samples come
     out *dimmer* than they would under the ISS override.
     """
-    from datetime import datetime, timedelta, timezone
+    from datetime import timedelta, timezone
 
     from core._types import Observer
     from core.catalog.tle_parser import parse_tle_file

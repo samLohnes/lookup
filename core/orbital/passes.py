@@ -8,8 +8,10 @@ Delegates the heavy lifting — SGP4 propagation and rise/set finding — to
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from typing import Literal
 
 from skyfield.api import EarthSatellite, Timescale, wgs84
+from skyfield.jpllib import SpiceKernel
 
 from core._types import (
     AngularPosition,
@@ -25,12 +27,49 @@ from core.orbital.refraction import (
     STANDARD_PRESSURE_MBAR,
     STANDARD_TEMPERATURE_C,
 )
+from core.visibility.darkness import is_observer_in_darkness
 
 EVENT_RISE = 0
 EVENT_CULMINATE = 1
 EVENT_SET = 2
 
 _ANGULAR_SPEED_BRACKET_DT = timedelta(seconds=1)
+
+
+def _is_sunlit_at(satellite: EarthSatellite, t, ephemeris: SpiceKernel) -> bool:
+    """Return True if the satellite is in sunlight (not in Earth's shadow) at `t`."""
+    return bool(satellite.at(t).is_sunlit(ephemeris))
+
+
+def _is_observer_dark_at(
+    time_dt: datetime,
+    observer: Observer,
+    timescale: Timescale,
+    ephemeris: SpiceKernel,
+) -> bool:
+    """Return True if the observer is in civil darkness at `time_dt`."""
+    return is_observer_in_darkness(time_dt, observer, timescale, ephemeris)
+
+
+def _classify_naked_eye(
+    satellite: EarthSatellite,
+    observer: Observer,
+    rise_t, peak_t, set_t,
+    rise_dt: datetime, peak_dt: datetime, set_dt: datetime,
+    timescale: Timescale,
+    ephemeris: SpiceKernel,
+) -> Literal["yes", "no", "partial"]:
+    """Three-state classification at rise/peak/set sample points."""
+    qualifies = []
+    for t, dt in ((rise_t, rise_dt), (peak_t, peak_dt), (set_t, set_dt)):
+        sunlit = _is_sunlit_at(satellite, t, ephemeris)
+        dark = _is_observer_dark_at(dt, observer, timescale, ephemeris)
+        qualifies.append(sunlit and dark)
+    if all(qualifies):
+        return "yes"
+    if not any(qualifies):
+        return "no"
+    return "partial"
 
 
 def _observe_altaz_with_range(
@@ -76,6 +115,7 @@ def predict_passes(
     end: datetime,
     *,
     timescale: Timescale,
+    ephemeris: SpiceKernel | None = None,
     min_elevation_deg: float = 0.0,
     horizon_mask: HorizonMask | None = None,
 ) -> list[Pass]:
@@ -87,6 +127,10 @@ def predict_passes(
         start: Inclusive window start (UTC).
         end: Exclusive window end (UTC).
         timescale: Skyfield Timescale (shared across calls).
+        ephemeris: Optional planetary ephemeris (DE421). When provided,
+            each `Pass` gets a `naked_eye_visible` classification computed
+            via `is_sunlit` + observer darkness at rise/peak/set. Without
+            it, classification is left as `None`.
         min_elevation_deg: Minimum peak elevation to include a pass.
             Used as the `altitude_degrees` parameter to skyfield.
         horizon_mask: Optional 360° mask; if provided, passes whose peak
@@ -150,6 +194,18 @@ def predict_passes(
             )
             angular_speed = arc_deg / (2.0 * _ANGULAR_SPEED_BRACKET_DT.total_seconds())
 
+            classification = None
+            if ephemeris is not None:
+                rise_t = timescale.from_datetime(rise_dt)
+                peak_t = timescale.from_datetime(peak_dt)
+                set_t = timescale.from_datetime(dt)
+                classification = _classify_naked_eye(
+                    satellite, observer,
+                    rise_t, peak_t, set_t,
+                    rise_dt, peak_dt, dt,
+                    timescale, ephemeris,
+                )
+
             duration = int(round((dt - rise_dt).total_seconds()))
             passes.append(
                 Pass(
@@ -164,6 +220,7 @@ def predict_passes(
                     sunlit_fraction=0.0,  # populated by visibility.filter_passes
                     tle_epoch=tle.epoch,
                     peak_angular_speed_deg_s=angular_speed,
+                    naked_eye_visible=classification,
                     terrain_blocked_ranges=(),
                 )
             )
