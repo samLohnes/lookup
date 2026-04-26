@@ -8,6 +8,7 @@ export interface PassEndpointResponse {
   time: string; // ISO-8601 UTC
   azimuth_deg: number;
   elevation_deg: number;
+  range_km: number;
 }
 
 export interface PassResponse {
@@ -22,6 +23,8 @@ export interface PassResponse {
   max_magnitude: number | null;
   sunlit_fraction: number;
   tle_epoch: string;
+  peak_angular_speed_deg_s: number;
+  naked_eye_visible: "yes" | "no" | "partial" | null;
 }
 
 export interface TrainPassResponse {

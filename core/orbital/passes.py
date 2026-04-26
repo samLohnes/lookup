@@ -7,9 +7,11 @@ Delegates the heavy lifting — SGP4 propagation and rise/set finding — to
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from typing import Literal
 
 from skyfield.api import EarthSatellite, Timescale, wgs84
+from skyfield.jpllib import SpiceKernel
 
 from core._types import (
     AngularPosition,
@@ -19,22 +21,78 @@ from core._types import (
     PassEndpoint,
     TLE,
 )
+from core.orbital.angular import angular_distance_deg
+from core.orbital.refraction import (
+    HORIZON_REFRACTION_DEG,
+    STANDARD_PRESSURE_MBAR,
+    STANDARD_TEMPERATURE_C,
+)
+from core.visibility.darkness import is_observer_in_darkness
 
 EVENT_RISE = 0
 EVENT_CULMINATE = 1
 EVENT_SET = 2
 
+_ANGULAR_SPEED_BRACKET_DT = timedelta(seconds=1)
 
-def _observe_altaz(
+
+def _is_sunlit_at(satellite: EarthSatellite, t, ephemeris: SpiceKernel) -> bool:
+    """Return True if the satellite is in sunlight (not in Earth's shadow) at `t`."""
+    return bool(satellite.at(t).is_sunlit(ephemeris))
+
+
+def _is_observer_dark_at(
+    time_dt: datetime,
+    observer: Observer,
+    timescale: Timescale,
+    ephemeris: SpiceKernel,
+) -> bool:
+    """Return True if the observer is in civil darkness at `time_dt`."""
+    return is_observer_in_darkness(time_dt, observer, timescale, ephemeris)
+
+
+def _classify_naked_eye(
+    satellite: EarthSatellite,
+    observer: Observer,
+    rise_t, peak_t, set_t,
+    rise_dt: datetime, peak_dt: datetime, set_dt: datetime,
+    timescale: Timescale,
+    ephemeris: SpiceKernel,
+) -> Literal["yes", "no", "partial"]:
+    """Three-state classification at rise/peak/set sample points."""
+    qualifies = []
+    for t, dt in ((rise_t, rise_dt), (peak_t, peak_dt), (set_t, set_dt)):
+        sunlit = _is_sunlit_at(satellite, t, ephemeris)
+        dark = _is_observer_dark_at(dt, observer, timescale, ephemeris)
+        qualifies.append(sunlit and dark)
+    if all(qualifies):
+        return "yes"
+    if not any(qualifies):
+        return "no"
+    return "partial"
+
+
+def _observe_altaz_with_range(
     satellite: EarthSatellite,
     topos,
     t,
-) -> AngularPosition:
-    """Return AngularPosition (az_deg, el_deg) of `satellite` from `topos` at `t`."""
+) -> tuple[AngularPosition, float]:
+    """Return (AngularPosition, range_km) of `satellite` from `topos` at `t`.
+
+    Altitude is refracted (Bennett's formula via skyfield) using sea-level
+    standard atmosphere. Range comes from the same topocentric solve.
+    """
     difference = satellite - topos
     topocentric = difference.at(t)
-    alt, az, _ = topocentric.altaz()
-    return AngularPosition(azimuth_deg=float(az.degrees) % 360.0, elevation_deg=float(alt.degrees))
+    alt, az, dist = topocentric.altaz(
+        pressure_mbar=STANDARD_PRESSURE_MBAR,
+        temperature_C=STANDARD_TEMPERATURE_C,
+    )
+    pos = AngularPosition(
+        azimuth_deg=float(az.degrees) % 360.0,
+        elevation_deg=float(alt.degrees),
+    )
+    return pos, float(dist.km)
 
 
 def _pass_id(norad_id: int, rise_time: datetime) -> str:
@@ -57,6 +115,7 @@ def predict_passes(
     end: datetime,
     *,
     timescale: Timescale,
+    ephemeris: SpiceKernel | None = None,
     min_elevation_deg: float = 0.0,
     horizon_mask: HorizonMask | None = None,
 ) -> list[Pass]:
@@ -68,6 +127,10 @@ def predict_passes(
         start: Inclusive window start (UTC).
         end: Exclusive window end (UTC).
         timescale: Skyfield Timescale (shared across calls).
+        ephemeris: Optional planetary ephemeris (DE421). When provided,
+            each `Pass` gets a `naked_eye_visible` classification computed
+            via `is_sunlit` + observer darkness at rise/peak/set. Without
+            it, classification is left as `None`.
         min_elevation_deg: Minimum peak elevation to include a pass.
             Used as the `altitude_degrees` parameter to skyfield.
         horizon_mask: Optional 360° mask; if provided, passes whose peak
@@ -86,34 +149,62 @@ def predict_passes(
     t0 = timescale.from_datetime(start.astimezone(timezone.utc))
     t1 = timescale.from_datetime(end.astimezone(timezone.utc))
 
-    times, events = satellite.find_events(topos, t0, t1, altitude_degrees=min_elevation_deg)
+    # Horizon-depression offset: rise/set events fire at the apparent horizon,
+    # not the geometric horizon. ~34 arc-minutes lower in geometric terms.
+    times, events = satellite.find_events(
+        topos, t0, t1,
+        altitude_degrees=min_elevation_deg - HORIZON_REFRACTION_DEG,
+    )
 
     passes: list[Pass] = []
-    pending_rise: tuple[datetime, AngularPosition] | None = None
-    pending_peak: tuple[datetime, AngularPosition] | None = None
+    pending_rise: tuple[datetime, AngularPosition, float] | None = None
+    pending_peak: tuple[datetime, AngularPosition, float] | None = None
 
     for t, e in zip(times, events):
         dt = t.utc_datetime().replace(tzinfo=timezone.utc)
-        pos = _observe_altaz(satellite, topos, t)
+        pos, range_km = _observe_altaz_with_range(satellite, topos, t)
 
         if e == EVENT_RISE:
-            pending_rise = (dt, pos)
+            pending_rise = (dt, pos, range_km)
             pending_peak = None
         elif e == EVENT_CULMINATE:
-            pending_peak = (dt, pos)
+            pending_peak = (dt, pos, range_km)
         elif e == EVENT_SET:
             if pending_rise is None or pending_peak is None:
                 # Partial pass at window boundary — skip.
                 pending_rise = None
                 pending_peak = None
                 continue
-            rise_dt, rise_pos = pending_rise
-            peak_dt, peak_pos = pending_peak
+            rise_dt, rise_pos, rise_range = pending_rise
+            peak_dt, peak_pos, peak_range = pending_peak
 
             if horizon_mask is not None and not _passes_above_horizon_mask(peak_pos, horizon_mask):
                 pending_rise = None
                 pending_peak = None
                 continue
+
+            # Sample two extra positions bracketing peak for angular speed.
+            t_before = timescale.from_datetime(peak_dt - _ANGULAR_SPEED_BRACKET_DT)
+            t_after = timescale.from_datetime(peak_dt + _ANGULAR_SPEED_BRACKET_DT)
+            pos_before, _r1 = _observe_altaz_with_range(satellite, topos, t_before)
+            pos_after, _r2 = _observe_altaz_with_range(satellite, topos, t_after)
+            arc_deg = angular_distance_deg(
+                pos_before.azimuth_deg, pos_before.elevation_deg,
+                pos_after.azimuth_deg, pos_after.elevation_deg,
+            )
+            angular_speed = arc_deg / (2.0 * _ANGULAR_SPEED_BRACKET_DT.total_seconds())
+
+            classification = None
+            if ephemeris is not None:
+                rise_t = timescale.from_datetime(rise_dt)
+                peak_t = timescale.from_datetime(peak_dt)
+                set_t = timescale.from_datetime(dt)
+                classification = _classify_naked_eye(
+                    satellite, observer,
+                    rise_t, peak_t, set_t,
+                    rise_dt, peak_dt, dt,
+                    timescale, ephemeris,
+                )
 
             duration = int(round((dt - rise_dt).total_seconds()))
             passes.append(
@@ -121,13 +212,15 @@ def predict_passes(
                     id=_pass_id(tle.norad_id, rise_dt),
                     norad_id=tle.norad_id,
                     name=tle.name,
-                    rise=PassEndpoint(time=rise_dt, position=rise_pos),
-                    peak=PassEndpoint(time=peak_dt, position=peak_pos),
-                    set=PassEndpoint(time=dt, position=pos),
+                    rise=PassEndpoint(time=rise_dt, position=rise_pos, range_km=rise_range),
+                    peak=PassEndpoint(time=peak_dt, position=peak_pos, range_km=peak_range),
+                    set=PassEndpoint(time=dt, position=pos, range_km=range_km),
                     duration_s=duration,
                     max_magnitude=None,   # populated by visibility.filter_passes
                     sunlit_fraction=0.0,  # populated by visibility.filter_passes
                     tle_epoch=tle.epoch,
+                    peak_angular_speed_deg_s=angular_speed,
+                    naked_eye_visible=classification,
                     terrain_blocked_ranges=(),
                 )
             )

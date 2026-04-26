@@ -17,11 +17,12 @@ class AngularPositionResponse(BaseModel):
 
 
 class PassEndpointResponse(BaseModel):
-    """A single (time, sky-position) event within a pass."""
+    """A single (time, sky-position, range) event within a pass."""
 
     time: datetime
     azimuth_deg: float
     elevation_deg: float
+    range_km: float
 
 
 class PassResponse(BaseModel):
@@ -38,6 +39,8 @@ class PassResponse(BaseModel):
     max_magnitude: Optional[float]
     sunlit_fraction: float
     tle_epoch: datetime
+    peak_angular_speed_deg_s: float
+    naked_eye_visible: Optional[Literal["yes", "no", "partial"]] = None
 
 
 class TrainPassResponse(BaseModel):
@@ -129,6 +132,7 @@ def _endpoint_to_response(ep: object) -> PassEndpointResponse:
         time=ep.time,  # type: ignore[attr-defined]
         azimuth_deg=ep.position.azimuth_deg,  # type: ignore[attr-defined]
         elevation_deg=ep.position.elevation_deg,  # type: ignore[attr-defined]
+        range_km=ep.range_km,  # type: ignore[attr-defined]
     )
 
 
@@ -145,6 +149,8 @@ def pass_to_response(p: Pass) -> PassResponse:
         max_magnitude=p.max_magnitude,
         sunlit_fraction=p.sunlit_fraction,
         tle_epoch=p.tle_epoch,
+        peak_angular_speed_deg_s=p.peak_angular_speed_deg_s,
+        naked_eye_visible=p.naked_eye_visible,
     )
 
 
