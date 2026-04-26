@@ -113,8 +113,11 @@ satellite queries are never auto-filtered.
 ## Accuracy
 
 The golden test (`tests/golden/test_iss_nyc.py`) locks the engine's output
-against a frozen baseline to ±1 s / ±0.1°. Results are recorded quarterly
-in [`docs/accuracy-log.md`](docs/accuracy-log.md) against Heavens-Above.
+against a frozen baseline to ±1 s / ±0.1°. Atmospheric refraction is applied
+to all reported altitudes (Bennett's formula via skyfield, sea-level
+constants) and to rise/set event detection (~34′ horizon depression), so
+predicted times match Heavens-Above convention. Results are recorded
+quarterly in [`docs/accuracy-log.md`](docs/accuracy-log.md) against Heavens-Above.
 
 To run a fresh cross-check:
 
