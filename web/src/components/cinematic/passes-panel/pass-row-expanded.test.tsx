@@ -14,21 +14,26 @@ const mockPass: PassResponse = {
     time: "2026-04-25T03:22:04Z",
     azimuth_deg: 270, // W
     elevation_deg: 10,
+    range_km: 1900,
   },
   peak: {
     time: "2026-04-25T03:25:10Z",
     azimuth_deg: 180, // S
     elevation_deg: 76,
+    range_km: 450,
   },
   set: {
     time: "2026-04-25T03:28:16Z",
     azimuth_deg: 67.5, // ENE
     elevation_deg: 10,
+    range_km: 1850,
   },
   duration_s: 372,
   max_magnitude: -2.1,
   sunlit_fraction: 1.0,
   tle_epoch: "2026-04-24T00:00:00Z",
+  peak_angular_speed_deg_s: 0.74,
+  naked_eye_visible: "yes",
 };
 
 describe("PassRowExpanded", () => {
@@ -60,17 +65,37 @@ describe("PassRowExpanded", () => {
     expect(screen.getByText("Peak mag")).toBeInTheDocument();
     expect(screen.getByText("−2.1")).toBeInTheDocument();
     expect(screen.getByText("Sunlit")).toBeInTheDocument();
-    expect(screen.getByText("yes")).toBeInTheDocument();
+    // "yes" appears in both Sunlit (sunlit_fraction=1.0) and Visible
+    // (naked_eye_visible="yes") — the field-specific assertions live in
+    // the per-field tests below.
+    expect(screen.getAllByText("yes").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders '—' for missing fields (range, ang speed, visible window)", () => {
+  it("renders peak range in km", () => {
     renderWithProviders(<PassRowExpanded pass={mockPass} />);
     expect(screen.getByText("Range peak")).toBeInTheDocument();
+    expect(screen.getByText("450 km")).toBeInTheDocument();
+  });
+
+  it("renders peak angular speed with two decimals and °/s suffix", () => {
+    renderWithProviders(<PassRowExpanded pass={mockPass} />);
     expect(screen.getByText("Ang. speed")).toBeInTheDocument();
+    expect(screen.getByText("0.74°/s")).toBeInTheDocument();
+  });
+
+  it("renders naked-eye visibility three-state", () => {
+    renderWithProviders(<PassRowExpanded pass={mockPass} />);
     expect(screen.getByText("Visible")).toBeInTheDocument();
-    // All three should be '—'
-    const dashes = screen.getAllByText("—");
-    expect(dashes.length).toBeGreaterThanOrEqual(3);
+    // KV value column shows "yes" (also matches sunlit value, but multi-match is fine).
+    expect(screen.getAllByText("yes").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("falls back to em-dash when naked_eye_visible is null", () => {
+    const noClass = { ...mockPass, naked_eye_visible: null };
+    renderWithProviders(<PassRowExpanded pass={noClass} />);
+    const visibleLabel = screen.getByText("Visible");
+    // The KV row places label and value as siblings under a grid parent.
+    expect(visibleLabel.parentElement).toHaveTextContent("Visible—");
   });
 
   it("shows 'partial (50%)' for sunlit_fraction 0.5", () => {

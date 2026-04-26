@@ -9,13 +9,15 @@ const mockPass: PassResponse = {
   id: "pass-1",
   norad_id: 25544,
   name: "ISS",
-  rise: { time: "2026-04-25T03:22:04Z", azimuth_deg: 270, elevation_deg: 10 }, // W
-  peak: { time: "2026-04-25T03:25:10Z", azimuth_deg: 180, elevation_deg: 76 }, // S
-  set: { time: "2026-04-25T03:28:16Z", azimuth_deg: 67.5, elevation_deg: 10 },
+  rise: { time: "2026-04-25T03:22:04Z", azimuth_deg: 270, elevation_deg: 10, range_km: 1900 }, // W
+  peak: { time: "2026-04-25T03:25:10Z", azimuth_deg: 180, elevation_deg: 76, range_km: 450 }, // S
+  set: { time: "2026-04-25T03:28:16Z", azimuth_deg: 67.5, elevation_deg: 10, range_km: 1850 },
   duration_s: 372,
   max_magnitude: -2.1,
   sunlit_fraction: 1.0,
   tle_epoch: "2026-04-24T00:00:00Z",
+  peak_angular_speed_deg_s: 0.74,
+  naked_eye_visible: "yes",
 };
 
 describe("PassRow", () => {
