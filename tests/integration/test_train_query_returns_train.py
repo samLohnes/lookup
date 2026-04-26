@@ -21,7 +21,6 @@ from skyfield.jpllib import SpiceKernel
 from api.app import create_app
 from api.deps import get_ephemeris, get_terrain_fetcher, get_timescale, get_tle_fetcher
 from api.settings import Settings
-from core._types import HorizonMask
 from core.catalog.celestrak import CelestrakClient
 from core.catalog.fetcher import TLEFetcher
 
@@ -78,17 +77,13 @@ def _starlink_mock_transport() -> httpx.MockTransport:
     return httpx.MockTransport(handler)
 
 
-def _fake_terrain() -> MagicMock:
-    """Terrain fetcher mock returning a flat zero-elevation horizon."""
-    fake = MagicMock()
-    fake.get_horizon_mask.return_value = HorizonMask(
-        samples_deg=tuple(0.0 for _ in range(360)),
-    )
-    return fake
-
-
 @pytest.fixture
-def client(tmp_path, timescale: Timescale, ephemeris: SpiceKernel):
+def client(
+    tmp_path,
+    timescale: Timescale,
+    ephemeris: SpiceKernel,
+    fake_terrain: MagicMock,
+):
     """TestClient wired with a TLEFetcher whose CelestrakClient uses the
     synthetic-starlink MockTransport, plus a flat terrain mock."""
     app = create_app(Settings(cache_root=str(tmp_path)))
@@ -97,7 +92,7 @@ def client(tmp_path, timescale: Timescale, ephemeris: SpiceKernel):
     app.dependency_overrides[get_tle_fetcher] = lambda: TLEFetcher(
         client=tle_client, cache_root=tmp_path,
     )
-    app.dependency_overrides[get_terrain_fetcher] = _fake_terrain
+    app.dependency_overrides[get_terrain_fetcher] = lambda: fake_terrain
     app.dependency_overrides[get_timescale] = lambda: timescale
     app.dependency_overrides[get_ephemeris] = lambda: ephemeris
     return TestClient(app)
