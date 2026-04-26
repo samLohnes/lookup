@@ -7,7 +7,7 @@ Delegates the heavy lifting — SGP4 propagation and rise/set finding — to
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from skyfield.api import EarthSatellite, Timescale, wgs84
 
@@ -19,6 +19,7 @@ from core._types import (
     PassEndpoint,
     TLE,
 )
+from core.orbital.angular import angular_distance_deg
 from core.orbital.refraction import (
     HORIZON_REFRACTION_DEG,
     STANDARD_PRESSURE_MBAR,
@@ -28,6 +29,8 @@ from core.orbital.refraction import (
 EVENT_RISE = 0
 EVENT_CULMINATE = 1
 EVENT_SET = 2
+
+_ANGULAR_SPEED_BRACKET_DT = timedelta(seconds=1)
 
 
 def _observe_altaz_with_range(
@@ -136,6 +139,17 @@ def predict_passes(
                 pending_peak = None
                 continue
 
+            # Sample two extra positions bracketing peak for angular speed.
+            t_before = timescale.from_datetime(peak_dt - _ANGULAR_SPEED_BRACKET_DT)
+            t_after = timescale.from_datetime(peak_dt + _ANGULAR_SPEED_BRACKET_DT)
+            pos_before, _r1 = _observe_altaz_with_range(satellite, topos, t_before)
+            pos_after, _r2 = _observe_altaz_with_range(satellite, topos, t_after)
+            arc_deg = angular_distance_deg(
+                pos_before.azimuth_deg, pos_before.elevation_deg,
+                pos_after.azimuth_deg, pos_after.elevation_deg,
+            )
+            angular_speed = arc_deg / (2.0 * _ANGULAR_SPEED_BRACKET_DT.total_seconds())
+
             duration = int(round((dt - rise_dt).total_seconds()))
             passes.append(
                 Pass(
@@ -149,6 +163,7 @@ def predict_passes(
                     max_magnitude=None,   # populated by visibility.filter_passes
                     sunlit_fraction=0.0,  # populated by visibility.filter_passes
                     tle_epoch=tle.epoch,
+                    peak_angular_speed_deg_s=angular_speed,
                     terrain_blocked_ranges=(),
                 )
             )
