@@ -13,6 +13,10 @@ from skyfield.api import EarthSatellite, Timescale, wgs84
 from skyfield.jpllib import SpiceKernel
 
 from core._types import Observer, TLE, TrackSample
+from core.orbital.refraction import (
+    STANDARD_PRESSURE_MBAR,
+    STANDARD_TEMPERATURE_C,
+)
 from core.visibility.darkness import is_observer_in_darkness
 from core.visibility.magnitude import ISS_INTRINSIC_MAGNITUDE, compute_magnitude
 
@@ -86,9 +90,12 @@ def sample_track(
     while cur < end:
         t = timescale.from_datetime(cur.astimezone(timezone.utc))
 
-        # Observer-relative geometry
+        # Observer-relative geometry (apparent altitude — refraction applied).
         topocentric = (satellite - topos).at(t)
-        alt, az, dist = topocentric.altaz()
+        alt, az, dist = topocentric.altaz(
+            pressure_mbar=STANDARD_PRESSURE_MBAR,
+            temperature_C=STANDARD_TEMPERATURE_C,
+        )
 
         # Ground-track sub-point
         geocentric = satellite.at(t)
