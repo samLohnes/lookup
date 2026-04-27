@@ -5,11 +5,9 @@ Runs entirely on your machine: skyfield + FastAPI backend, React + Three.js
 frontend, zero cloud dependencies beyond free data sources (Celestrak TLEs,
 OpenTopography DEM tiles, OSM map tiles).
 
-**Version:** v0.7.0 — Observatory aesthetic (Fraunces / Inter / JetBrains
-Mono typography, amber-gold accent), procedural Milky Way starfield,
-refined atmosphere, redesigned observer-elevation field, and a top-left
-row of config chips (Observer · Satellite · Window · Visibility · Run)
-replacing the cinematic-mode left drawer.
+**Version:** v0.8.0 — Engine accuracy upgrade (atmospheric refraction
+applied to altitudes and rise/set events; range, peak angular speed,
+and naked-eye visibility classification now exposed per pass).
 
 ![Earth view with playback](docs/screenshots/earth-view.png)
 
