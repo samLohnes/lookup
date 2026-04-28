@@ -1,4 +1,5 @@
 import { useTrackAtCursor } from "@/hooks/use-track-at-cursor";
+import { useLivePositionStore } from "@/store/live-position";
 import type { TrackSampleResponse } from "@/types/api";
 
 interface Cell {
@@ -19,12 +20,24 @@ const CELLS: Cell[] = [
   },
 ];
 
-/** Bottom of the passes panel: 2×3 grid of live telemetry values at the
- *  current playback cursor. Labels tiny uppercase, values in mono at
- *  ~15pt. Renders "—" in every cell when the sample is null (no pass
- *  selected OR samples still loading). */
+/** Bottom of the passes panel: 2×3 grid of live telemetry values.
+ *
+ *  Source priority:
+ *    1. The currently-cursored pass sample (`useTrackAtCursor`).
+ *    2. The latest live-mode poll, when no pass is selected and
+ *       exactly one satellite is active in live mode.
+ *    3. "—" in every cell otherwise (no pass selected and group live
+ *       mode, or no sat searched at all).
+ */
 export function PanelTelemetry() {
-  const { sample } = useTrackAtCursor();
+  const { sample: passSample } = useTrackAtCursor();
+  const livePositions = useLivePositionStore((s) => s.positions);
+  const activeNorads = useLivePositionStore((s) => s.activeNorads);
+
+  let sample: TrackSampleResponse | null = passSample;
+  if (!sample && activeNorads.length === 1) {
+    sample = livePositions.get(activeNorads[0]) ?? null;
+  }
 
   return (
     <div className="shrink-0 border-t border-accent-400/12 bg-[rgba(10,8,20,0.35)] p-3.5">
