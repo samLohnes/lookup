@@ -19,24 +19,63 @@ export interface LiveTrails {
   /** Advance the dash-animation phase to the given time. Caller passes
    *  performance.now() each frame from the render loop. */
   tick: (timeMs: number) => void;
+  /** Update the shader's viewport-size uniform. Call from EarthView's
+   *  resize handler so pixel-space width tapering stays correct under
+   *  zoom and viewport changes. */
+  setResolution: (width: number, height: number) => void;
   setVisible: (v: boolean) => void;
   dispose: () => void;
 }
 
 const TRAIL_COLOR = new THREE.Color(0xffae60);
 const TRAIL_PEAK_OPACITY = 0.6;
+const WIDTH_HEAD = 5.0;       // pixels, at the marker (newest sample)
+const WIDTH_TAIL = 0.5;       // pixels, at the oldest sample
 const DASH_COUNT = 6.0;
-const GAP_FRAC = 0.4;       // 60% dash, 40% gap per cycle
-const CYCLES_PER_SEC = 1.0; // one full dash-shift per second
+const GAP_FRAC = 0.4;         // 60% dash, 40% gap per cycle
+const CYCLES_PER_SEC = 1.0;   // one full dash-shift per second
 
 const VERTEX_SHADER = /* glsl */ `
+  #define WIDTH_HEAD ${WIDTH_HEAD.toFixed(2)}
+  #define WIDTH_TAIL ${WIDTH_TAIL.toFixed(2)}
   attribute float aLineDistance;
+  attribute float aSide;
+  attribute vec3 aTangent;
+  uniform vec2 uResolution;
+
   varying float vAge;
   varying float vDistance;
+
   void main() {
-    vAge = 1.0 - aLineDistance;
+    vec4 clipPos = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    vec4 clipTan = projectionMatrix * modelViewMatrix * vec4(position + aTangent, 1.0);
+
+    // Compute 2D direction in screen pixel space.
+    vec2 ndcPos = clipPos.xy / clipPos.w;
+    vec2 ndcTan = clipTan.xy / clipTan.w;
+    vec2 dirPx = (ndcTan - ndcPos) * uResolution * 0.5;
+    if (length(dirPx) < 0.0001) {
+      // Degenerate tangent: skip offset, keep vertex at line center.
+      vAge = 1.0 - aLineDistance;
+      vDistance = aLineDistance;
+      gl_Position = clipPos;
+      return;
+    }
+    vec2 dir2D = normalize(dirPx);
+    vec2 perp2D = vec2(-dir2D.y, dir2D.x);
+
+    // Width tapers head→tail by linear interpolation on vAge.
+    float vAgeLocal = 1.0 - aLineDistance;
+    float widthPx = mix(WIDTH_TAIL, WIDTH_HEAD, vAgeLocal);
+
+    // Convert pixel offset to clip-space offset.
+    vec2 offsetPx = perp2D * aSide * widthPx * 0.5;
+    vec2 offsetClip = (offsetPx / uResolution) * 2.0 * clipPos.w;
+
+    clipPos.xy += offsetClip;
+    vAge = vAgeLocal;
     vDistance = aLineDistance;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    gl_Position = clipPos;
   }
 `;
 
@@ -61,51 +100,135 @@ const FRAGMENT_SHADER = /* glsl */ `
   }
 `;
 
-/** Convert a polyline of points into both the position vertex array and
- *  the per-vertex normalized line-distance array.
+/** Convert a polyline of N points into the 5 buffer attributes a ribbon
+ *  mesh needs: 2N positions (each polyline point duplicated, with the
+ *  shader differentiating left/right via aSide), 2N normalized
+ *  aLineDistance values (paired), 2N aSide values alternating ±1, 2N
+ *  per-vertex aTangent vectors (world-space line direction at each
+ *  point), and (N-1)*6 indices for the triangle pairs.
  *
- *  `aLineDistance[i] = 1 - i/(n-1)` so index 0 (the oldest sample) is at
- *  distance 1.0 (tail, fully faded) and index n-1 (the newest, head) is
- *  at distance 0.0 (head, fully bright). The vertex shader maps this to
- *  `vAge = 1.0 - aLineDistance` to drive the head-to-tail fade gradient.
- *  Naming kept as "lineDistance" for symmetry with Three.js's built-in
- *  computeLineDistances even though the values are normalized index-
- *  fractions, not arc-length. */
-function trailToAttributes(trail: TrailPoint[]): {
+ *  Tangent at point i:
+ *    - i = 0:        p_1 - p_0  (single-segment forward)
+ *    - i = n - 1:    p_{n-1} - p_{n-2}  (single-segment backward)
+ *    - interior:     (p_{i+1} - p_{i-1}) / 2  (averaged for smooth join)
+ *
+ *  Magnitude of aTangent is unimportant — the vertex shader normalizes
+ *  the projected direction. Only direction matters. */
+function trailToRibbonAttributes(trail: TrailPoint[]): {
   positions: Float32Array;
   lineDistances: Float32Array;
+  sides: Float32Array;
+  tangents: Float32Array;
+  indices: Uint16Array;
 } {
   const n = trail.length;
-  const positions = new Float32Array(n * 3);
-  const lineDistances = new Float32Array(n);
-  const denom = Math.max(1, n - 1);
+  const positions = new Float32Array(n * 2 * 3);
+  const lineDistances = new Float32Array(n * 2);
+  const sides = new Float32Array(n * 2);
+  const tangents = new Float32Array(n * 2 * 3);
+  const indices = new Uint16Array((n - 1) * 6);
+
+  // Convert all polyline points to 3D once (avoids redundant work in the
+  // tangent loop below).
+  const points: Array<{ x: number; y: number; z: number }> = new Array(n);
   for (let i = 0; i < n; i++) {
     const { lat, lng, alt_km } = trail[i];
     const v = latLngAltToVec3(lat, lng, alt_km);
-    positions[i * 3] = v.x;
-    positions[i * 3 + 1] = v.y;
-    positions[i * 3 + 2] = v.z;
-    lineDistances[i] = 1.0 - i / denom;
+    points[i] = { x: v.x, y: v.y, z: v.z };
   }
-  return { positions, lineDistances };
+
+  const denom = Math.max(1, n - 1);
+  for (let i = 0; i < n; i++) {
+    const p = points[i];
+
+    // Tangent: average of incoming + outgoing for interior points; single-
+    // segment direction for endpoints.
+    let tx: number, ty: number, tz: number;
+    if (i === 0) {
+      const next = points[1];
+      tx = next.x - p.x;
+      ty = next.y - p.y;
+      tz = next.z - p.z;
+    } else if (i === n - 1) {
+      const prev = points[i - 1];
+      tx = p.x - prev.x;
+      ty = p.y - prev.y;
+      tz = p.z - prev.z;
+    } else {
+      const prev = points[i - 1];
+      const next = points[i + 1];
+      tx = (next.x - prev.x) * 0.5;
+      ty = (next.y - prev.y) * 0.5;
+      tz = (next.z - prev.z) * 0.5;
+    }
+
+    const lineDist = 1.0 - i / denom;
+    const baseV = i * 2;
+
+    // Vertex L (aSide = -1)
+    positions[baseV * 3] = p.x;
+    positions[baseV * 3 + 1] = p.y;
+    positions[baseV * 3 + 2] = p.z;
+    sides[baseV] = -1;
+    lineDistances[baseV] = lineDist;
+    tangents[baseV * 3] = tx;
+    tangents[baseV * 3 + 1] = ty;
+    tangents[baseV * 3 + 2] = tz;
+
+    // Vertex R (aSide = +1) — same position and tangent, opposite side.
+    const baseR = baseV + 1;
+    positions[baseR * 3] = p.x;
+    positions[baseR * 3 + 1] = p.y;
+    positions[baseR * 3 + 2] = p.z;
+    sides[baseR] = 1;
+    lineDistances[baseR] = lineDist;
+    tangents[baseR * 3] = tx;
+    tangents[baseR * 3 + 1] = ty;
+    tangents[baseR * 3 + 2] = tz;
+
+    // Triangle indices for segment i (skip the last point — it has no
+    // outgoing segment). Two triangles form the quad between point i and
+    // point i+1.
+    if (i < n - 1) {
+      const a = baseV;       // L of point i
+      const b = baseV + 1;   // R of point i
+      const c = baseV + 2;   // L of point i+1
+      const d = baseV + 3;   // R of point i+1
+      const idxBase = i * 6;
+      // Triangle 1: L_i, R_i, L_{i+1}
+      indices[idxBase] = a;
+      indices[idxBase + 1] = b;
+      indices[idxBase + 2] = c;
+      // Triangle 2: R_i, R_{i+1}, L_{i+1}
+      indices[idxBase + 3] = b;
+      indices[idxBase + 4] = d;
+      indices[idxBase + 5] = c;
+    }
+  }
+
+  return { positions, lineDistances, sides, tangents, indices };
 }
 
-/** Manages N parallel polylines for the live-mode trailing tracks.
+/** Manages N tapered ribbon meshes for the live-mode trailing tracks.
  *
- * Each trail is a single faint orange line with two animated effects:
- *   - Head-bright fade gradient (head fully visible, tail fully
- *     transparent) drives "this is a trailing tail" perception.
- *   - Marching dashes flowing toward the marker, advanced via
+ * Each trail is a triangle-strip ribbon with three combined effects:
+ *   - Width taper from WIDTH_HEAD (head, near marker) to WIDTH_TAIL
+ *     (oldest end), expanded perpendicular to the line in screen space
+ *     by the vertex shader so width stays in pixels regardless of zoom.
+ *   - Head-bright fade gradient (head fully visible, fading to
+ *     transparent at the tail) drives "this is a trailing tail"
+ *     perception.
+ *   - Marching dashes flowing away from the marker, advanced via
  *     `tick(timeMs)` from the render loop, drives "the satellite is
- *     moving in this direction" perception.
+ *     leaving stuff behind" comet-tail intuition.
  *
  * Pool grows/shrinks with the trail count. Trails with fewer than 2
- * samples are skipped (can't draw a line).
+ * samples are skipped (can't draw a ribbon).
  *
- * The `_earthRadiusUnits` and `_viewport` parameters are kept for API
- * symmetry with `createGroundTrackMesh` even though `latLngAltToVec3`
- * reads `EARTH_RADIUS_UNITS` from `@/lib/geo3d` directly and the
- * ShaderMaterial does not need the viewport.
+ * Caller MUST call `setResolution(w, h)` whenever the canvas viewport
+ * changes — the screen-space width tapering depends on viewport
+ * dimensions. The `_earthRadiusUnits` and `_viewport` constructor
+ * parameters are kept for API symmetry with `createGroundTrackMesh`.
  */
 export function createLiveTrails(
   _earthRadiusUnits: number,
@@ -114,10 +237,13 @@ export function createLiveTrails(
   const group = new THREE.Group();
   group.visible = false;
 
-  // One ShaderMaterial shared across all live trails. Combines a head-
-  // bright fade gradient (from `vAge`) with a marching-dash mask
-  // (from `vDistance` + `uTime`). Animation is driven by `tick(timeMs)`
-  // from the render loop.
+  // One ShaderMaterial shared across all live trails. The vertex shader
+  // expands each polyline-point pair into a screen-space-aligned ribbon
+  // whose width tapers from WIDTH_HEAD (head) to WIDTH_TAIL (tail). The
+  // fragment shader combines a head-bright fade gradient with a marching-
+  // dash mask. Animation is driven by `tick(timeMs)` from the render loop.
+  // DoubleSide is required because the ribbon is a thin 2D strip viewed
+  // from a 3D camera; without it, the strip vanishes when viewed edge-on.
   const material = new THREE.ShaderMaterial({
     uniforms: {
       uColor: { value: TRAIL_COLOR },
@@ -126,28 +252,30 @@ export function createLiveTrails(
       uDashCount: { value: DASH_COUNT },
       uGapFrac: { value: GAP_FRAC },
       uCyclesPerSec: { value: CYCLES_PER_SEC },
+      uResolution: { value: new THREE.Vector2(1, 1) },
     },
     vertexShader: VERTEX_SHADER,
     fragmentShader: FRAGMENT_SHADER,
     transparent: true,
     depthWrite: false,
+    side: THREE.DoubleSide,
   });
 
-  const lines: THREE.Line[] = [];
+  const meshes: THREE.Mesh[] = [];
   const geometries: THREE.BufferGeometry[] = [];
 
   function ensurePoolSize(n: number): void {
-    while (lines.length < n) {
+    while (meshes.length < n) {
       const geom = new THREE.BufferGeometry();
-      const line = new THREE.Line(geom, material);
-      lines.push(line);
+      const mesh = new THREE.Mesh(geom, material);
+      meshes.push(mesh);
       geometries.push(geom);
-      group.add(line);
+      group.add(mesh);
     }
-    while (lines.length > n) {
-      const line = lines.pop()!;
+    while (meshes.length > n) {
+      const mesh = meshes.pop()!;
       const geom = geometries.pop()!;
-      group.remove(line);
+      group.remove(mesh);
       geom.dispose();
     }
   }
@@ -156,7 +284,8 @@ export function createLiveTrails(
     const drawable = trails.filter((t) => t.length >= 2);
     ensurePoolSize(drawable.length);
     for (let i = 0; i < drawable.length; i++) {
-      const { positions, lineDistances } = trailToAttributes(drawable[i]);
+      const { positions, lineDistances, sides, tangents, indices } =
+        trailToRibbonAttributes(drawable[i]);
       geometries[i].setAttribute(
         "position",
         new THREE.BufferAttribute(positions, 3),
@@ -165,6 +294,15 @@ export function createLiveTrails(
         "aLineDistance",
         new THREE.BufferAttribute(lineDistances, 1),
       );
+      geometries[i].setAttribute(
+        "aSide",
+        new THREE.BufferAttribute(sides, 1),
+      );
+      geometries[i].setAttribute(
+        "aTangent",
+        new THREE.BufferAttribute(tangents, 3),
+      );
+      geometries[i].setIndex(new THREE.BufferAttribute(indices, 1));
       geometries[i].computeBoundingSphere();
     }
   }
@@ -174,6 +312,10 @@ export function createLiveTrails(
     material.uniforms.uTime.value = timeMs / 1000.0;
   }
 
+  function setResolution(width: number, height: number): void {
+    material.uniforms.uResolution.value.set(width, height);
+  }
+
   function setVisible(v: boolean): void {
     group.visible = v;
   }
@@ -181,10 +323,10 @@ export function createLiveTrails(
   function dispose(): void {
     material.dispose();
     for (const g of geometries) g.dispose();
-    for (const l of lines) group.remove(l);
-    lines.length = 0;
+    for (const m of meshes) group.remove(m);
+    meshes.length = 0;
     geometries.length = 0;
   }
 
-  return { group, setTrails, tick, setVisible, dispose };
+  return { group, setTrails, tick, setResolution, setVisible, dispose };
 }
