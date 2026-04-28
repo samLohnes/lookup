@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from api.routes.catalog import router as catalog_router
 from api.routes.geo import router as geo_router
 from api.routes.horizon import router as horizon_router
+from api.routes.now import router as now_router
 from api.routes.passes import router as passes_router
 from api.routes.sky_track import router as sky_track_router
 from api.routes.tle_freshness import router as tle_freshness_router
@@ -42,6 +43,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(catalog_router)
     app.include_router(geo_router)
     app.include_router(horizon_router)
+    app.include_router(now_router)
     app.include_router(passes_router)
     app.include_router(sky_track_router)
     app.include_router(tle_freshness_router)
