@@ -124,3 +124,35 @@ export interface ElevationResponse {
   lng: number;
   elevation_m: number;
 }
+
+// Live-mode endpoints (POST /now-positions, POST /now-tracks)
+
+export interface NowPositionsRequest {
+  lat: number;
+  lng: number;
+  elevation_m: number;
+  norad_ids: number[];
+}
+
+export interface NowTracksRequest extends NowPositionsRequest {
+  tail_minutes?: number;  // defaults to 10
+  dt_seconds?: number;    // defaults to 30
+}
+
+export interface NowPositionEntry {
+  norad_id: number;
+  sample: TrackSampleResponse;
+}
+
+export interface NowPositionsResponse {
+  entries: NowPositionEntry[];
+}
+
+export interface NowTrackEntry {
+  norad_id: number;
+  samples: TrackSampleResponse[];
+}
+
+export interface NowTracksResponse {
+  entries: NowTrackEntry[];
+}
