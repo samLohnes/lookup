@@ -30,9 +30,10 @@ This spec combines both ("option C" from the brainstorm).
 1. **Custom `ShaderMaterial`** replaces `LineBasicMaterial` in `live-trails-mesh.ts`. One material, shared across all live trails (preserves the current pool architecture).
 2. **Per-vertex `aLineDistance` attribute** written at `setTrails()` time. Stores cumulative-fraction-normalized distance: 0.0 at the head (newest sample), 1.0 at the tail (oldest sample). Independent of absolute trail length — same shader works for trails of varying point counts.
 3. **Vertex shader** passes `vAge = 1.0 - aLineDistance` (head-bright fraction) and `vDistance = aLineDistance` (raw position-along-line) to the fragment shader.
-4. **Fragment shader** computes `alpha = vAge * dashMask(vDistance, uTime)`:
-   - `dashMask = step(gapFrac, fract(vDistance * dashCount + uTime * cyclesPerSec))`
-   - The `+uTime` direction makes dashes flow *toward* the head as `vDistance=0` is the head and the dash crests `x*N + t*S = const` migrate to lower `x` as `t` grows (i.e., toward the marker).
+4. **Fragment shader** computes `alpha = pow(vAge, 2.5) * uPeakOpacity * dashMask`:
+   - `dashMask = step(gapFrac, fract(vDistance * dashCount - uTime * cyclesPerSec))`
+   - The `-uTime` direction makes dashes flow *away* from the head: dash crests satisfy `x*N - t*S = const`, so as `t` grows `x` migrates to higher values (toward the tail), reading as "trail being shed behind the satellite" — matching comet-tail / exhaust visual intuition.
+   - The `pow(vAge, 2.5)` curve (instead of plain `vAge`) tapers the trail's ink density aggressively. At the middle of the trail, `vAge=0.5` produces alpha ≈ 0.18 instead of 0.5. Visually reads as thinning toward the tail without changing actual pixel width.
 5. **`liveTrails.tick(timeMs: number)`** new method on the public API. Updates the shared material's `uTime` uniform. Called once per frame from `earth-view.tsx`'s rAF loop.
 6. **Color and opacity** stay close to current: orange `0xffae60`, peak alpha 0.6 at the head (slightly brighter than current 0.35 because the fade-out at the tail compensates for the average brightness budget). Material is `transparent: true`.
 7. **Dash parameters (uniforms — fixed at material construction):** `dashCount = 6.0`, `gapFrac = 0.4`, `cyclesPerSec = 1.0`. Tunable as constants in the file; not user-configurable.
@@ -76,16 +77,16 @@ const VERTEX_SHADER = /* glsl */ `
 const FRAGMENT_SHADER = /* glsl */ `
   uniform vec3 uColor;
   uniform float uPeakOpacity;
-  uniform float uTime;       // seconds
+  uniform float uTime;
   uniform float uDashCount;
   uniform float uGapFrac;
   uniform float uCyclesPerSec;
   varying float vAge;
   varying float vDistance;
   void main() {
-    float phase = fract(vDistance * uDashCount + uTime * uCyclesPerSec);
+    float phase = fract(vDistance * uDashCount - uTime * uCyclesPerSec);
     float dashMask = step(uGapFrac, phase);
-    float alpha = vAge * uPeakOpacity * dashMask;
+    float alpha = pow(vAge, 2.5) * uPeakOpacity * dashMask;
     if (alpha < 0.01) discard;
     gl_FragColor = vec4(uColor, alpha);
   }

@@ -50,9 +50,12 @@ const FRAGMENT_SHADER = /* glsl */ `
   varying float vAge;
   varying float vDistance;
   void main() {
-    float phase = fract(vDistance * uDashCount + uTime * uCyclesPerSec);
+    float phase = fract(vDistance * uDashCount - uTime * uCyclesPerSec);
     float dashMask = step(uGapFrac, phase);
-    float alpha = vAge * uPeakOpacity * dashMask;
+    // Steeper fade than linear vAge — ink density tapers aggressively
+    // from full at the head to near-zero at the tail. Visually reads as
+    // "thicker at the head" without changing pixel width.
+    float alpha = pow(vAge, 2.5) * uPeakOpacity * dashMask;
     if (alpha < 0.01) discard;
     gl_FragColor = vec4(uColor, alpha);
   }
