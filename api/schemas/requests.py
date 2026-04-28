@@ -79,7 +79,10 @@ class SkyTrackRequest(_ObserverFields):
 
 
 class _ObserverFieldsWithNorads(_ObserverFields):
-    norad_ids: list[int] = Field(..., min_length=1)
+    # max_length=200 is well above realistic group sizes (Starlink trains
+    # are ~60 sats max in current catalog) and prevents trivial DoS via
+    # huge norad lists forcing thousands of Skyfield propagations.
+    norad_ids: list[int] = Field(..., min_length=1, max_length=200)
 
 
 class NowPositionsRequest(_ObserverFieldsWithNorads):

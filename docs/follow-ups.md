@@ -54,7 +54,13 @@ The cinematic version doesn't.
 
 ---
 
-## Live satellite position on 3D globe when no pass is selected
+## ~~Live satellite position on 3D globe when no pass is selected~~ — shipped 2026-04-28
+
+**Status:** Shipped on `feat/live-globe-position` (2026-04-28). See spec at
+[`docs/superpowers/specs/2026-04-27-live-globe-position-design.md`](superpowers/specs/2026-04-27-live-globe-position-design.md).
+
+The original problem statement and design notes below are preserved for
+historical reference.
 
 **Surfaced by:** [`feat/passes-panel-redesign`](superpowers/specs/2026-04-24-passes-panel-redesign.md) §2.2 (deferred there as a bundled sky-view + globe live-mode; descoped to globe-only in the 2026-04-27 follow-up review — sky view stays empty when no pass is selected).
 
@@ -176,3 +182,125 @@ wait for Celestrak to publish (if it ever will) or fork the project.
 - Out of scope (call out explicitly to avoid scope creep): bulk TLE
   import from a file, automatic refresh of stale TLEs from
   space-track.org, sharing custom TLEs between users/devices.
+
+---
+
+## Typed `TLENotFoundError` for live-mode 404 vs 502 distinction
+
+**Surfaced by:** `feat/live-globe-position` (shipped 2026-04-28). Final review
+flagged that `api/routes/now.py` catches both `LookupError` and the broad
+`CelestrakError` and surfaces both as `HTTPException(404)`. Transient network
+failures (Celestrak timeouts, 5xx responses) with no cached TLE will look
+like "NORAD not found" to the frontend, causing the live-polling hook to
+silently drop those satellites instead of retrying on the next poll.
+
+**Problem.** `core/catalog/celestrak.py:100` raises `CelestrakError("Celestrak
+returned no results for NORAD …")` for genuine not-found cases, but the same
+exception class is used for network errors, malformed responses, and other
+upstream failures. Once the TLE fetcher's stale-cache fallback kicks in, only
+the cold-cache + transient-failure case actually surfaces — but that's the
+case live-polling cares about most (a brand-new search target where the cache
+is empty).
+
+**What needs to happen.**
+
+- Introduce `core/catalog/celestrak.py: class CelestrakNotFoundError(CelestrakError)`.
+- Raise it specifically at line 100 when `_parse_3le_text(body)` returns no TLEs.
+- In `api/routes/now.py`, catch `(LookupError, CelestrakNotFoundError)` for 404
+  and let other `CelestrakError` variants propagate (the existing
+  `_celestrak_error_handler` in `api/app.py` will surface them as 500).
+- Add an integration test for the network-error case using `httpx.MockTransport`
+  returning a 502.
+
+**Useful context.**
+
+- Existing exception hierarchy: `core/catalog/celestrak.py:24` defines `CelestrakError`.
+- The fetcher's stale-cache fallback at `core/catalog/fetcher.py:104-107` swallows
+  most transient failures, so this only matters for cold-cache + upstream-fail.
+- Out of scope: changing the existing `/passes` route's exception handling.
+
+---
+
+## Multi-NORAD integration test for `/now-positions` and `/now-tracks`
+
+**Surfaced by:** `feat/live-globe-position` (shipped 2026-04-28). The integration
+tests in `tests/integration/test_now_routes.py` only cover single-NORAD requests,
+but the spec's primary use case is group queries (e.g., "stations" → ISS +
+Tiangong). The route's per-NORAD loop is exercised in production but not
+verified by tests.
+
+**Problem.** A regression in the `for nid in req.norad_ids:` loop (e.g., wrong
+ordering, missing entry, wrong NORAD echoed back) would slip through CI today.
+
+**What needs to happen.**
+
+- Add `test_now_positions_multi_norad`: post with `norad_ids=[25544, 48274]`,
+  fixture serves both via `_fake_transport_from`'s URL-aware path (already
+  in place from the original task), assert two entries in response order matches
+  request order, both have plausible sample data.
+- Add `test_now_tracks_multi_norad`: same shape but for the trail endpoint.
+- Add a `tests/fixtures/celestrak/tiangong_single.txt` fixture if not already
+  present (current branch only uses `iss_single.txt`).
+
+**Useful context.**
+
+- The existing `_fake_transport_from` at `tests/integration/test_now_routes.py:23-36`
+  inspects `CATNR` query params; extend the lookup table.
+- Reuse the `client` fixture pattern from the same file.
+
+---
+
+## Per-frame allocation polish in `EarthView` live render loop
+
+**Surfaced by:** `feat/live-globe-position` (shipped 2026-04-28). The rAF loop
+in `web/src/components/earth-view/earth-view.tsx:142-149` projects each trail
+sample to `{lat, lng, alt_km}` every frame, allocating ~200 small objects per
+second at typical N (1-4 sats × ~20 trail samples × 60 fps).
+
+**Problem.** Pure waste: `liveTrails.setTrails` only reads those three fields
+from the input anyway. The intermediate projection is gratuitous, and `Map`
+allocation per-frame contributes minor GC pressure that's avoidable.
+
+**What needs to happen.**
+
+- Update `web/src/components/earth-view/live-trails-mesh.ts` to accept
+  `TrackSampleResponse[]` (or a structurally compatible type with `lat/lng/alt_km`)
+  directly in `setTrails`, removing the need for the projection.
+- Drop the `.map((s) => ({lat, lng, alt_km}))` from `earth-view.tsx`'s rAF loop.
+- The live-trails-mesh tests should still pass since the input shape is widened,
+  not narrowed.
+
+**Useful context.**
+
+- `live-trails-mesh.ts:30-34` reads only `lat`, `lng`, `alt_km` from each sample.
+- Existing test in `live-trails-mesh.test.ts` uses minimal `{lat, lng, alt_km}`
+  objects — would still work with the widened type.
+
+---
+
+## TLE freshness indicator for live-mode markers
+
+**Surfaced by:** `feat/live-globe-position` (shipped 2026-04-28). Pass-row UI
+already surfaces TLE age via `tle_epoch` / `fetched_age_seconds`. Live mode has
+no equivalent — a stale TLE (e.g., 30+ days old) would silently produce
+positions that drift from reality without any user-facing signal.
+
+**Problem.** SGP4 accuracy degrades non-linearly past ~14 days. A live marker
+on the globe with an old TLE looks just as authoritative as one with a fresh
+TLE, but its position could be off by tens of kilometers.
+
+**What needs to happen.**
+
+- Extend the `/now-positions` response with `tle_epoch: datetime` and
+  `fetched_age_seconds: float` per entry (mirror the existing pattern from
+  `/tle-freshness`).
+- Frontend: add a small staleness chip near the live marker count (or the
+  PanelTelemetry header) when the oldest active TLE is > 14 days.
+- Decide whether to *block* live mode for very stale TLEs (> 30 days?) or just
+  warn — likely just warn, with copy explaining the SGP4 accuracy degradation.
+
+**Useful context.**
+
+- `core/catalog/fetcher.py: TLEFetcher.get_tle()` returns `(tle, age_seconds)`.
+- Existing freshness UI: `web/src/components/passes/pass-card.tsx` for the
+  pass-mode reference.
