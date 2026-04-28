@@ -150,6 +150,7 @@ export function EarthView() {
             }));
           });
           handles.liveTrails.setTrails(trails);
+          handles.liveTrails.tick(now);
           handles.liveTrails.setVisible(true);
         } else {
           handles.liveMarkers.setVisible(false);
