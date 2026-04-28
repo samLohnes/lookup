@@ -61,4 +61,14 @@ describe("extrapolatePosition", () => {
     // delta = +2, t = 0.2 → +0.4 from latest = 12.4
     expect(out.lng).toBeCloseTo(12.4, 5);
   });
+
+  it("extrapolates forward past the next-poll time when t > 1", () => {
+    // Two polls 5s apart with +0.5° lng motion. nowMs is 10s past lastPolledMs
+    // (i.e., the next poll is 5s late). t = 10000/5000 = 2 → 2× the segment delta.
+    const previous = sample("2026-04-27T00:00:00Z", 0, 10);
+    const latest = sample("2026-04-27T00:00:05Z", 0, 10.5);
+    const out = extrapolatePosition(latest, previous, 11000, 1000);
+    // delta = +0.5, t = 2 → +1.0 from latest = 11.5
+    expect(out.lng).toBeCloseTo(11.5, 5);
+  });
 });
