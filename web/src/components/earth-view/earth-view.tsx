@@ -77,6 +77,7 @@ export function EarthView() {
       h.renderer.setSize(w, ht);
       h.camera.aspect = w / ht;
       h.camera.updateProjectionMatrix();
+      h.liveTrails.setResolution(w, ht);
     };
     window.addEventListener("resize", handleResize);
 
