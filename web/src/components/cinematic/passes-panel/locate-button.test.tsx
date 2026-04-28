@@ -81,4 +81,18 @@ describe("LocateButton", () => {
     expect(target?.lat).toBeCloseTo(0, 5);
     expect(target?.lng).toBeCloseTo(45, 5);
   });
+
+  it("disables the button for antipodal satellite positions (degenerate centroid)", () => {
+    useLivePositionStore.getState().setActive([25544, 48274]);
+    useLivePositionStore.getState().applyPoll(
+      [
+        { norad_id: 25544, sample: stubSample(0, 0) },
+        { norad_id: 48274, sample: stubSample(0, 180) },  // antipode
+      ],
+      1000,
+    );
+    renderWithProviders(<LocateButton />);
+    const btn = screen.getByRole("button", { name: "Locate satellite" });
+    expect(btn).toBeDisabled();
+  });
 });

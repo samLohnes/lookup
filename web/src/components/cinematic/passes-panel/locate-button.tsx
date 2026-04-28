@@ -26,6 +26,12 @@ function sphericalCentroid(
   }
   const n = points.length;
   x /= n; y /= n; z /= n;
+  // Antipodal / near-degenerate case: the mean vector has near-zero
+  // magnitude, so atan2 below would return arbitrary lat/lng (often 0,0).
+  // Bail out — the LocateButton will show as disabled with an explanatory
+  // tooltip rather than tween the camera to Null Island.
+  const mag = Math.sqrt(x * x + y * y + z * z);
+  if (mag < 1e-6) return null;
   const lat = (Math.atan2(z, Math.sqrt(x * x + y * y)) * 180) / Math.PI;
   const lng = (Math.atan2(y, x) * 180) / Math.PI;
   return { lat, lng };
@@ -61,7 +67,13 @@ export function LocateButton() {
       type="button"
       onClick={handleClick}
       disabled={disabled}
-      title={disabled ? "Search a satellite first" : "Locate satellite"}
+      title={
+        centroid !== null
+          ? "Locate satellite"
+          : activeNorads.length > 0
+            ? "Waiting for live position…"
+            : "Search a satellite first"
+      }
       aria-label="Locate satellite"
       className={
         "shrink-0 inline-flex items-center justify-center w-7 h-7 rounded " +
