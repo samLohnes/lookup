@@ -9,6 +9,7 @@ import { usePlaybackStore } from "@/store/playback";
 import { useLivePolling } from "@/hooks/use-live-polling";
 import { useLivePositionStore } from "@/store/live-position";
 import { extrapolatePosition } from "@/lib/live-extrapolation";
+import { useCameraTargetStore } from "@/store/camera-target";
 
 /** Find the largest index `i` such that `samples[i].time <= cursorIso`.
  *  Returns 0 when the cursor precedes the first sample. `TrackSampleResponse`
@@ -49,6 +50,7 @@ export function EarthView() {
   const skyTrack = useCurrentSkyTrack();
   const selectedPassId = useSelectionStore((s) => s.selectedPassId);
   const cursorUtc = usePlaybackStore((s) => s.cursorUtc);
+  const cameraTarget = useCameraTargetStore((s) => s.target);
 
   useLivePolling();
 
@@ -213,6 +215,15 @@ export function EarthView() {
     // reframe on simultaneous observer+selection changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPassId]);
+
+  // Reframe the camera when the LocateButton fires. Nonce-keyed so repeat
+  // clicks fire even when lat/lng haven't moved.
+  useEffect(() => {
+    const handles = handlesRef.current;
+    if (!handles || !cameraTarget) return;
+    handles.reframeToObserver(cameraTarget.lat, cameraTarget.lng);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cameraTarget?.nonce]);
 
   // Push the ground-track geometry to the scene when sky-track data arrives.
   useEffect(() => {
