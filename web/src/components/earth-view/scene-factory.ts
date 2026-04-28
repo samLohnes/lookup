@@ -4,6 +4,8 @@ import { createEarthMesh } from "./earth-mesh";
 import { createAtmosphereMesh } from "./atmosphere-mesh";
 import { createStarfieldMesh } from "./starfield-mesh";
 import { createGroundTrackMesh } from "./ground-track-mesh";
+import { createLiveMarkers, type LiveMarkers } from "./live-markers-mesh";
+import { createLiveTrails, type LiveTrails } from "./live-trails-mesh";
 import { createCameraControls } from "./camera-controls";
 
 export interface SceneHandles {
@@ -18,6 +20,10 @@ export interface SceneHandles {
   satelliteMarker: THREE.Mesh;
   /** Group containing background + progress ground-track lines. */
   groundTrack: THREE.Group;
+  /** Pool of N orange spheres for live-mode positions (multi-sat). */
+  liveMarkers: LiveMarkers;
+  /** Pool of N faint polylines for live-mode trailing tracks (multi-sat). */
+  liveTrails: LiveTrails;
   /** Update the earth's day/night shader to the given UTC date. */
   updateSunDirection: (date: Date) => void;
   /** Replace the ground-track geometry for a new pass. */
@@ -100,6 +106,11 @@ export async function createScene(
   });
   scene.add(groundTrack.group);
 
+  const liveMarkers = createLiveMarkers(EARTH_RADIUS_UNITS);
+  const liveTrails = createLiveTrails(EARTH_RADIUS_UNITS, { width, height });
+  scene.add(liveMarkers.group);
+  scene.add(liveTrails.group);
+
   // Camera controls (drag-to-rotate + reframe tween).
   const cameraCtl = createCameraControls(camera, canvas);
 
@@ -108,6 +119,8 @@ export async function createScene(
     atmosphere.dispose();
     starfield.dispose();
     groundTrack.dispose();
+    liveMarkers.dispose();
+    liveTrails.dispose();
     cameraCtl.dispose();
     pinGeo.dispose();
     pinMat.dispose();
@@ -124,6 +137,8 @@ export async function createScene(
     observerPin,
     satelliteMarker,
     groundTrack: groundTrack.group,
+    liveMarkers,
+    liveTrails,
     updateSunDirection: earth.updateSunDirection,
     setTrack: groundTrack.setTrack,
     setProgress: groundTrack.setProgress,
