@@ -3,6 +3,10 @@ import type {
   ElevationResponse,
   GeoTimezoneResponse,
   HorizonResponse,
+  NowPositionsRequest,
+  NowPositionsResponse,
+  NowTracksRequest,
+  NowTracksResponse,
   PassesRequest,
   PassesResponseBody,
   SkyTrackRequest,
@@ -62,6 +66,20 @@ export const api = {
     request<SkyTrackResponseBody>("/sky-track", {
       method: "POST",
       body: JSON.stringify(body),
+    }),
+
+  nowPositions: (body: NowPositionsRequest, signal?: AbortSignal) =>
+    request<NowPositionsResponse>("/now-positions", {
+      method: "POST",
+      body: JSON.stringify(body),
+      signal,
+    }),
+
+  nowTracks: (body: NowTracksRequest, signal?: AbortSignal) =>
+    request<NowTracksResponse>("/now-tracks", {
+      method: "POST",
+      body: JSON.stringify(body),
+      signal,
     }),
 
   horizon: (lat: number, lng: number, elevation_m = 0) =>
