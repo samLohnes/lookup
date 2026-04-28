@@ -76,3 +76,53 @@ class SkyTrackRequest(_ObserverFields):
             ]
         }
     }
+
+
+class _ObserverFieldsWithNorads(_ObserverFields):
+    norad_ids: list[int] = Field(..., min_length=1)
+
+
+class NowPositionsRequest(_ObserverFieldsWithNorads):
+    """Single-instant position(s) for one or more satellites.
+
+    Polled by the frontend live-mode loop at ~5s cadence.
+    """
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "lat": 40.7128,
+                    "lng": -74.0060,
+                    "elevation_m": 10,
+                    "norad_ids": [25544],
+                }
+            ]
+        }
+    }
+
+
+class NowTracksRequest(_ObserverFieldsWithNorads):
+    """Trailing track(s) for one or more satellites.
+
+    Called once per satellite-change to seed the rolling trail buffer
+    on the frontend; not a recurring poll.
+    """
+
+    tail_minutes: int = Field(10, ge=1, le=60)
+    dt_seconds: int = Field(30, ge=1, le=300)
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "lat": 40.7128,
+                    "lng": -74.0060,
+                    "elevation_m": 10,
+                    "norad_ids": [25544],
+                    "tail_minutes": 10,
+                    "dt_seconds": 30,
+                }
+            ]
+        }
+    }
