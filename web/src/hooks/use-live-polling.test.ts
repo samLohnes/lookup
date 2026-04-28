@@ -115,4 +115,33 @@ describe("useLivePolling", () => {
     await vi.runOnlyPendingTimersAsync();
     expect((api.nowPositions as unknown as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(initialCalls);
   });
+
+  it("aborts in-flight nowPositions when norads change", async () => {
+    // Mock nowPositions to return a never-resolving promise so we can verify
+    // the AbortController fires before resolution. Capture only the FIRST
+    // signal so the rerender's new call doesn't overwrite our reference.
+    const signalsSeen: AbortSignal[] = [];
+    (api.nowPositions as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      (_body: unknown, signal?: AbortSignal) => {
+        if (signal) signalsSeen.push(signal);
+        return new Promise(() => {}); // never resolves
+      },
+    );
+
+    const { rerender } = renderHook(() => useLivePolling());
+    await vi.runOnlyPendingTimersAsync();
+    expect(signalsSeen.length).toBeGreaterThan(0);
+    const firstSignal = signalsSeen[0];
+    expect(firstSignal.aborted).toBe(false);
+
+    // Change passes to a different sat — should trigger a new effect run,
+    // which aborts the prior controller.
+    (useCurrentPasses as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: { query: "Tiangong", resolved_name: "Tiangong", passes: [stubPass(48274)], tle_age_seconds: 0 },
+      isLoading: false,
+    });
+    rerender();
+    await vi.runOnlyPendingTimersAsync();
+    expect(firstSignal.aborted).toBe(true);
+  });
 });

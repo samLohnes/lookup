@@ -79,6 +79,8 @@ export function useLivePolling(): void {
         if (err?.name !== "AbortError") console.error("nowTracks failed", e);
       });
 
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
     const tick = async () => {
       try {
         const res = await api.nowPositions(
@@ -89,16 +91,27 @@ export function useLivePolling(): void {
       } catch (e: unknown) {
         const err = e as { name?: string };
         if (err?.name !== "AbortError") console.error("nowPositions failed", e);
+      } finally {
+        // Schedule the next poll only after this one completes — natural
+        // backpressure if a poll exceeds 5s on a slow network. Skip if
+        // we've been aborted (cleanup ran while we were in flight).
+        if (!abort.signal.aborted) {
+          timeoutId = setTimeout(tick, POLL_INTERVAL_MS);
+        }
       }
     };
 
-    const id = setInterval(tick, POLL_INTERVAL_MS);
-    void tick();
+    void tick(); // fire immediately
 
     return () => {
       abort.abort();
-      clearInterval(id);
+      if (timeoutId !== null) clearTimeout(timeoutId);
     };
+    // Zustand setters (setActive, seedTrails, applyPoll, clear) are stable
+    // references across renders — eslint can't statically see this, so we
+    // disable exhaustive-deps for the setter omissions. `noradsKey` (a
+    // stable string from sorted-int joins) replaces `norads` in the deps
+    // to avoid firing on every render due to array reference identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     liveModeOn,
