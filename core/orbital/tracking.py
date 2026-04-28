@@ -139,3 +139,39 @@ def sample_track(
         cur += step
 
     return samples
+
+
+def sample_at(
+    tle: TLE,
+    observer: Observer,
+    when: datetime,
+    *,
+    timescale: Timescale,
+    ephemeris: SpiceKernel,
+    intrinsic_magnitude: float = DEFAULT_INTRINSIC_MAGNITUDE,
+) -> TrackSample:
+    """Compute one TrackSample at a single instant.
+
+    Equivalent to `sample_track(when, when + 1s, dt=1)[0]` — used by
+    /now-positions for instantaneous polls. Wraps the same propagation
+    logic; reuses the same refraction model, magnitude calculation,
+    and sun-sunlit logic.
+
+    Args:
+        tle: Orbital elements.
+        observer: Observation location.
+        when: Instant to sample (UTC, must be timezone-aware).
+        timescale: Skyfield Timescale.
+        ephemeris: Planetary ephemeris.
+        intrinsic_magnitude: Intrinsic visual magnitude. Defaults to
+            DEFAULT_INTRINSIC_MAGNITUDE.
+
+    Returns:
+        A single TrackSample for the requested instant.
+    """
+    samples = sample_track(
+        tle, observer, when, when + timedelta(seconds=1),
+        timescale=timescale, ephemeris=ephemeris,
+        dt_seconds=1, intrinsic_magnitude=intrinsic_magnitude,
+    )
+    return samples[0]
