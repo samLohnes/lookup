@@ -85,4 +85,37 @@ describe("createLiveTrails", () => {
     expect(positions.getZ(1)).toBeCloseTo(0, 5);
     lt.dispose();
   });
+
+  it("setTrails writes aLineDistance attribute (1.0 at oldest, 0.0 at newest)", () => {
+    const lt = createLiveTrails(1.0, { width: 1024, height: 768 });
+    lt.setTrails([[
+      { lat: 0, lng: 0, alt_km: 0 },     // oldest (index 0)
+      { lat: 0, lng: 45, alt_km: 0 },    // middle
+      { lat: 0, lng: 90, alt_km: 0 },    // newest (index n-1)
+    ]]);
+    const line = lt.group.children[0] as THREE.Line;
+    const attr = line.geometry.getAttribute("aLineDistance") as THREE.BufferAttribute;
+    expect(attr).toBeDefined();
+    expect(attr.count).toBe(3);
+    expect(attr.getX(0)).toBeCloseTo(1.0, 5);  // oldest → fully aged
+    expect(attr.getX(1)).toBeCloseTo(0.5, 5);  // middle
+    expect(attr.getX(2)).toBeCloseTo(0.0, 5);  // newest → head, fresh
+    lt.dispose();
+  });
+
+  it("tick(timeMs) updates the material uTime uniform (ms → seconds)", () => {
+    const lt = createLiveTrails(1.0, { width: 1024, height: 768 });
+    lt.setTrails([[
+      { lat: 0, lng: 0, alt_km: 0 },
+      { lat: 0, lng: 45, alt_km: 0 },
+    ]]);
+    const line = lt.group.children[0] as THREE.Line;
+    const material = line.material as THREE.ShaderMaterial;
+    expect(material.uniforms.uTime.value).toBe(0.0);
+    lt.tick(2500);
+    expect(material.uniforms.uTime.value).toBeCloseTo(2.5, 5);
+    lt.tick(7000);
+    expect(material.uniforms.uTime.value).toBeCloseTo(7.0, 5);
+    lt.dispose();
+  });
 });
