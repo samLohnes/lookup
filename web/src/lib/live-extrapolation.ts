@@ -49,10 +49,10 @@ export function extrapolatePosition(
   else if (naiveDelta < -180) prevLng -= 360;
 
   const lat = latest.lat + (latest.lat - previous.lat) * t;
-  let lng = latest.lng + (latest.lng - prevLng) * t;
-  // Re-wrap into [-180, 180].
-  while (lng > 180) lng -= 360;
-  while (lng < -180) lng += 360;
+  const rawLng = latest.lng + (latest.lng - prevLng) * t;
+  // Re-wrap into [-180, 180] in O(1). Guards against non-finite inputs that
+  // would otherwise spin a `while` loop forever in the 60Hz render path.
+  const lng = ((((rawLng + 180) % 360) + 360) % 360) - 180;
   const alt_km = latest.alt_km + (latest.alt_km - previous.alt_km) * t;
 
   return { lat, lng, alt_km };
