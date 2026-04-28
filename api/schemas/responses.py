@@ -191,3 +191,29 @@ def track_sample_to_response(s: TrackSample) -> TrackSampleResponse:
         sunlit=s.sunlit,
         observer_dark=s.observer_dark,
     )
+
+
+class NowPositionEntry(BaseModel):
+    """One satellite's instantaneous position (used inside NowPositionsResponse)."""
+
+    norad_id: int
+    sample: TrackSampleResponse
+
+
+class NowPositionsResponse(BaseModel):
+    """Response envelope for POST /now-positions."""
+
+    entries: list[NowPositionEntry]
+
+
+class NowTrackEntry(BaseModel):
+    """One satellite's trailing track (used inside NowTracksResponse)."""
+
+    norad_id: int
+    samples: list[TrackSampleResponse]
+
+
+class NowTracksResponse(BaseModel):
+    """Response envelope for POST /now-tracks."""
+
+    entries: list[NowTrackEntry]
