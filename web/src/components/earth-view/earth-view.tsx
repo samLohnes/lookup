@@ -6,6 +6,9 @@ import { useTrackAtCursor } from "@/hooks/use-track-at-cursor";
 import { useCurrentSkyTrack } from "@/hooks/use-current-sky-track";
 import { useSelectionStore } from "@/store/selection";
 import { usePlaybackStore } from "@/store/playback";
+import { useLivePolling } from "@/hooks/use-live-polling";
+import { useLivePositionStore } from "@/store/live-position";
+import { extrapolatePosition } from "@/lib/live-extrapolation";
 
 /** Find the largest index `i` such that `samples[i].time <= cursorIso`.
  *  Returns 0 when the cursor precedes the first sample. `TrackSampleResponse`
@@ -46,6 +49,8 @@ export function EarthView() {
   const skyTrack = useCurrentSkyTrack();
   const selectedPassId = useSelectionStore((s) => s.selectedPassId);
   const cursorUtc = usePlaybackStore((s) => s.cursorUtc);
+
+  useLivePolling();
 
   // Mount once.
   useEffect(() => {
@@ -104,6 +109,51 @@ export function EarthView() {
       handleResize();
 
       const renderLoop = () => {
+        // Live-mode wiring: read store directly to avoid React render churn
+        // at 60fps. When live mode is active, drive the live meshes from
+        // extrapolated positions; otherwise keep them hidden.
+        const live = useLivePositionStore.getState();
+        const liveModeActive =
+          live.activeNorads.length > 0 && live.lastPolledAt !== null;
+
+        if (liveModeActive) {
+          // Pass-mode meshes hidden while live mode owns the globe.
+          handles.satelliteMarker.visible = false;
+          handles.groundTrack.visible = false;
+
+          const now = performance.now();
+          const interpolated = live.activeNorads
+            .map((nid) => {
+              const latest = live.positions.get(nid);
+              if (!latest) return null;
+              const previous = live.previousPositions.get(nid);
+              return extrapolatePosition(
+                latest,
+                previous,
+                now,
+                live.lastPolledAt!,
+              );
+            })
+            .filter((p): p is NonNullable<typeof p> => p !== null);
+
+          handles.liveMarkers.setPositions(interpolated);
+          handles.liveMarkers.setVisible(true);
+
+          const trails = live.activeNorads.map((nid) => {
+            const trail = live.trails.get(nid) ?? [];
+            return trail.map((s) => ({
+              lat: s.lat,
+              lng: s.lng,
+              alt_km: s.alt_km,
+            }));
+          });
+          handles.liveTrails.setTrails(trails);
+          handles.liveTrails.setVisible(true);
+        } else {
+          handles.liveMarkers.setVisible(false);
+          handles.liveTrails.setVisible(false);
+        }
+
         handles.renderer.render(handles.scene, handles.camera);
         raf = requestAnimationFrame(renderLoop);
       };
