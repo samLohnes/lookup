@@ -18,6 +18,11 @@ def test_now_positions_request_rejects_empty_norad_ids():
         NowPositionsRequest(lat=40.0, lng=-74.0, norad_ids=[])
 
 
+def test_now_positions_request_rejects_oversized_norad_list():
+    with pytest.raises(ValidationError):
+        NowPositionsRequest(lat=40.0, lng=-74.0, norad_ids=list(range(201)))
+
+
 def test_now_tracks_request_defaults():
     req = NowTracksRequest(lat=40.0, lng=-74.0, norad_ids=[25544])
     assert req.tail_minutes == 10
