@@ -5,6 +5,7 @@ import { PassList } from "./pass-list";
 import { PanelSkyView } from "./panel-sky-view";
 import { PanelTelemetry } from "./panel-telemetry";
 import { LocateButton } from "./locate-button";
+import { DeselectButton } from "./deselect-button";
 
 /** Right-side always-expanded passes panel in cinematic mode.
  *  Three stacked sections: passes (top, flex-grows) → sky view (when
@@ -33,7 +34,10 @@ export function PassesPanel() {
             {count} tonight
           </div>
         </div>
-        <LocateButton />
+        <div className="flex gap-1">
+          <DeselectButton />
+          <LocateButton />
+        </div>
       </div>
       {isEmptyTrainQuery ? <EmptyTrains /> : <PassList />}
       {hasSelection && <PanelSkyView />}
