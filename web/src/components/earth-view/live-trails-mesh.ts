@@ -108,9 +108,13 @@ const FRAGMENT_SHADER = /* glsl */ `
  *  point), and (N-1)*6 indices for the triangle pairs.
  *
  *  Tangent at point i:
- *    - i = 0:        p_1 - p_0  (single-segment forward)
- *    - i = n - 1:    p_{n-1} - p_{n-2}  (single-segment backward)
- *    - interior:     (p_{i+1} - p_{i-1}) / 2  (averaged for smooth join)
+ *    - i = 0:    p_1 - p_0  (forward, since no predecessor exists)
+ *    - i >= 1:   p_i - p_{i-1}  (backward, for stability across polls)
+ *
+ *  Backward-segment tangents are stable when new samples are appended
+ *  at the head: every existing point's tangent depends only on itself
+ *  and its (unchanging) predecessor. This eliminates the per-poll
+ *  ribbon-twist that occurs when interior points are re-tangentized.
  *
  *  Magnitude of aTangent is unimportant — the vertex shader normalizes
  *  the projected direction. Only direction matters. */
@@ -141,25 +145,26 @@ function trailToRibbonAttributes(trail: TrailPoint[]): {
   for (let i = 0; i < n; i++) {
     const p = points[i];
 
-    // Tangent: average of incoming + outgoing for interior points; single-
-    // segment direction for endpoints.
+    // Tangent: backward-segment direction for everything except the first
+    // (oldest) point, which uses forward-segment because it has no
+    // predecessor. This rule is critical for stability across polls — when
+    // a new sample is appended at the head, every existing point's tangent
+    // is unchanged because each tangent depends only on the point and its
+    // predecessor (which never change). Without this, the previously-newest
+    // point would shift from "single-segment endpoint" to "averaged
+    // interior" tangent on each poll, causing visible mid-ribbon twist
+    // (perceived as flicker at the 5s polling boundary).
     let tx: number, ty: number, tz: number;
     if (i === 0) {
       const next = points[1];
       tx = next.x - p.x;
       ty = next.y - p.y;
       tz = next.z - p.z;
-    } else if (i === n - 1) {
+    } else {
       const prev = points[i - 1];
       tx = p.x - prev.x;
       ty = p.y - prev.y;
       tz = p.z - prev.z;
-    } else {
-      const prev = points[i - 1];
-      const next = points[i + 1];
-      tx = (next.x - prev.x) * 0.5;
-      ty = (next.y - prev.y) * 0.5;
-      tz = (next.z - prev.z) * 0.5;
     }
 
     const lineDist = 1.0 - i / denom;

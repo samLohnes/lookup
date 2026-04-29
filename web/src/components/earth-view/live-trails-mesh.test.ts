@@ -149,11 +149,20 @@ describe("createLiveTrails", () => {
     lt.dispose();
   });
 
-  it("setTrails writes aTangent attribute (averaged for interior, single-segment for endpoints)", () => {
-    // Use 3 points along the equator. In Cartesian (latLngAltToVec3 with alt=0):
+  it("setTrails writes aTangent attribute (backward-segment for stability across polls)", () => {
+    // 3 points along the equator. In Cartesian (latLngAltToVec3 with alt=0):
     //   p0 = (lat=0, lng=0)  → (1, 0, 0)
     //   p1 = (lat=0, lng=45) → (~0.7071, 0, ~-0.7071)
     //   p2 = (lat=0, lng=90) → (0, 0, -1)
+    //
+    // Tangent rule: backward-segment for all points except the first (which
+    // uses forward because there's no predecessor).
+    //   - i=0:  forward,  p1 - p0
+    //   - i=1:  backward, p1 - p0  (= forward at i=0; first segment)
+    //   - i=2:  backward, p2 - p1  (second segment)
+    //
+    // This rule is stable across polls: when a new sample is appended,
+    // every existing point's tangent is unchanged.
     const lt = createLiveTrails(1.0, { width: 1024, height: 768 });
     lt.setTrails([[
       { lat: 0, lng: 0, alt_km: 0 },
@@ -163,21 +172,57 @@ describe("createLiveTrails", () => {
     const mesh = lt.group.children[0] as THREE.Mesh;
     const tangents = mesh.geometry.getAttribute("aTangent") as THREE.BufferAttribute;
     expect(tangents.count).toBe(6);
-    // Endpoint i=0: tangent = p1 - p0
-    // Both vertex 0 (L) and vertex 1 (R) share the same tangent.
+    // i=0 (forward, p1-p0). Both vertex 0 (L) and vertex 1 (R) share.
     expect(tangents.getX(0)).toBeCloseTo(0.7071 - 1, 4);
     expect(tangents.getY(0)).toBeCloseTo(0, 5);
     expect(tangents.getZ(0)).toBeCloseTo(-0.7071 - 0, 4);
     expect(tangents.getX(1)).toBeCloseTo(tangents.getX(0), 5);
     expect(tangents.getZ(1)).toBeCloseTo(tangents.getZ(0), 5);
-    // Interior i=1: tangent = (p2 - p0) / 2
-    expect(tangents.getX(2)).toBeCloseTo((0 - 1) / 2, 5);
+    // i=1 (backward, p1-p0). Same as i=0 in this case (single first segment).
+    expect(tangents.getX(2)).toBeCloseTo(0.7071 - 1, 4);
     expect(tangents.getY(2)).toBeCloseTo(0, 5);
-    expect(tangents.getZ(2)).toBeCloseTo((-1 - 0) / 2, 5);
-    // Endpoint i=2: tangent = p2 - p1
+    expect(tangents.getZ(2)).toBeCloseTo(-0.7071 - 0, 4);
+    // i=2 (backward, p2-p1). New segment.
     expect(tangents.getX(4)).toBeCloseTo(0 - 0.7071, 4);
     expect(tangents.getY(4)).toBeCloseTo(0, 5);
     expect(tangents.getZ(4)).toBeCloseTo(-1 - (-0.7071), 4);
+    lt.dispose();
+  });
+
+  it("aTangent of existing points is unchanged when a new sample is appended (poll stability)", () => {
+    // The point of the backward-segment tangent rule: appending a new sample
+    // at the head should not change the tangents of existing points. This
+    // test mimics what happens at each /now-positions poll boundary.
+    const lt = createLiveTrails(1.0, { width: 1024, height: 768 });
+
+    // Trail with 2 points (initial state after seed).
+    lt.setTrails([[
+      { lat: 0, lng: 0, alt_km: 0 },
+      { lat: 0, lng: 45, alt_km: 0 },
+    ]]);
+    const before = (lt.group.children[0] as THREE.Mesh).geometry.getAttribute("aTangent") as THREE.BufferAttribute;
+    const beforeT0 = [before.getX(0), before.getY(0), before.getZ(0)];
+    const beforeT1 = [before.getX(2), before.getY(2), before.getZ(2)];
+
+    // Trail with 3 points (after one poll appends a new sample).
+    lt.setTrails([[
+      { lat: 0, lng: 0, alt_km: 0 },
+      { lat: 0, lng: 45, alt_km: 0 },
+      { lat: 0, lng: 90, alt_km: 0 },
+    ]]);
+    const after = (lt.group.children[0] as THREE.Mesh).geometry.getAttribute("aTangent") as THREE.BufferAttribute;
+    const afterT0 = [after.getX(0), after.getY(0), after.getZ(0)];
+    const afterT1 = [after.getX(2), after.getY(2), after.getZ(2)];
+
+    // i=0 (oldest, forward) — unchanged: still p1-p0.
+    expect(afterT0[0]).toBeCloseTo(beforeT0[0], 5);
+    expect(afterT0[1]).toBeCloseTo(beforeT0[1], 5);
+    expect(afterT0[2]).toBeCloseTo(beforeT0[2], 5);
+    // i=1 (was head, now interior) — unchanged: backward p1-p0 in both cases.
+    expect(afterT1[0]).toBeCloseTo(beforeT1[0], 5);
+    expect(afterT1[1]).toBeCloseTo(beforeT1[1], 5);
+    expect(afterT1[2]).toBeCloseTo(beforeT1[2], 5);
+
     lt.dispose();
   });
 
