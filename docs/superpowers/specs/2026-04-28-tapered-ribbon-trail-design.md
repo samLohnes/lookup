@@ -27,7 +27,7 @@ This is the standard "fat-line" technique used by Three.js's `Line2` internally,
 1. **Triangle-strip ribbon mesh** replaces `THREE.Line` in `live-trails-mesh.ts`. Each trail polyline of N points → mesh of 2N vertices and (N-1) × 2 triangles (= 6 indices per segment).
 2. **Per-vertex width via attribute** plus shader-derived taper: width interpolates from `WIDTH_HEAD = 5.0` px at the head to `WIDTH_TAIL = 0.5` px at the tail. Computed in the vertex shader from `aLineDistance` (already present).
 3. **Screen-space expansion** in the vertex shader using a per-vertex `aTangent` attribute (the local line direction). The shader projects position+tangent to NDC, computes the 2D direction in screen space, takes the perpendicular, and offsets each vertex by `aSide * width / 2` pixels.
-4. **`aTangent` computation** in JS at `setTrails()` time. For interior points: average of incoming and outgoing segment direction (`(P_{i+1} - P_{i-1}) / 2`). For endpoints: single-segment direction (`P_1 - P_0` for index 0; `P_{n-1} - P_{n-2}` for index n-1).
+4. **`aTangent` computation** in JS at `setTrails()` time. For point 0 (oldest): forward-segment direction (`P_1 - P_0`) because no predecessor exists. For all other points (i ≥ 1): backward-segment direction (`P_i - P_{i-1}`). This rule is critical for stability when new samples are appended at the head: every existing point's tangent depends only on itself and its predecessor, neither of which changes when a new point is added at the end. The original "averaged interior" rule caused visible mid-ribbon twist (flicker) at each poll boundary as the previously-newest point was re-tangentized.
 5. **`aSide` attribute** alternates -1, +1, -1, +1, ... — pairs share the same `aLineDistance` and `aTangent`, differ only in side.
 6. **`liveTrails.setResolution(width, height)`** new method updating a `uResolution` uniform. Called from `EarthView`'s existing `handleResize` and once after scene creation. The shader needs viewport dimensions to convert pixel offsets to clip-space offsets correctly.
 7. **Existing animation preserved.** Dash mask, fade gradient (`pow(vAge, 2.5)`), `-uTime` flow direction, `tick(timeMs)` API — all unchanged.
@@ -201,20 +201,16 @@ function trailToRibbonAttributes(trail: TrailPoint[]): {
   const denom = Math.max(1, n - 1);
   for (let i = 0; i < n; i++) {
     const p = points[i];
-    // Tangent: average of incoming + outgoing for interior, single for endpoints.
+    // Tangent: backward-segment for everything except the first (oldest)
+    // point. This rule is stable across polls — appending a new sample at
+    // the head leaves every existing tangent unchanged.
     let tx: number, ty: number, tz: number;
     if (i === 0) {
       const next = points[1];
       tx = next.x - p.x; ty = next.y - p.y; tz = next.z - p.z;
-    } else if (i === n - 1) {
-      const prev = points[i - 1];
-      tx = p.x - prev.x; ty = p.y - prev.y; tz = p.z - prev.z;
     } else {
       const prev = points[i - 1];
-      const next = points[i + 1];
-      tx = (next.x - prev.x) * 0.5;
-      ty = (next.y - prev.y) * 0.5;
-      tz = (next.z - prev.z) * 0.5;
+      tx = p.x - prev.x; ty = p.y - prev.y; tz = p.z - prev.z;
     }
 
     const lineDist = 1.0 - i / denom;
