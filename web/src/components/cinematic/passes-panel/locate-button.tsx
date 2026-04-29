@@ -1,6 +1,7 @@
 import { useLivePositionStore } from "@/store/live-position";
 import { useSelectionStore } from "@/store/selection";
 import { useCameraTargetStore } from "@/store/camera-target";
+import { useTrackAtCursor } from "@/hooks/use-track-at-cursor";
 
 const DEG = Math.PI / 180;
 
@@ -38,9 +39,15 @@ function sphericalCentroid(
 }
 
 /** Small icon button in the passes-panel header. Tweens the camera to
- *  the current live satellite position (centroid for group queries) and
- *  deselects any currently-selected pass. Disabled when no live position
- *  is available.
+ *  the current satellite position and deselects any currently-selected
+ *  pass.
+ *
+ *  Target priority:
+ *    1. Pass mode → pass-marker position from the playback cursor (so
+ *       the button works while a pass is selected; useLivePolling's
+ *       lifecycle gate empties the live store in this state).
+ *    2. Live mode → spherical centroid of all active live positions.
+ *    3. Idle (no satellite searched) → button disabled.
  */
 export function LocateButton() {
   const selectedPassId = useSelectionStore((s) => s.selectedPassId);
@@ -49,17 +56,38 @@ export function LocateButton() {
   const activeNorads = useLivePositionStore((s) => s.activeNorads);
   const reframeTo = useCameraTargetStore((s) => s.reframeTo);
 
-  const livePoints = activeNorads
-    .map((nid) => positions.get(nid))
-    .filter((p): p is NonNullable<typeof p> => p !== undefined)
-    .map((s) => ({ lat: s.lat, lng: s.lng }));
-  const centroid = sphericalCentroid(livePoints);
-  const disabled = centroid === null;
+  const { sample: passSample } = useTrackAtCursor();
+
+  // Target priority:
+  //   1. Pass mode (a pass is selected and the cursor sample is loaded):
+  //      use the pass-marker position. This makes the button work in
+  //      pass mode — without it, the live store is empty (cleared by
+  //      useLivePolling's lifecycle gate) and the button would be
+  //      uselessly disabled.
+  //   2. Live mode (one or more live positions available): spherical
+  //      centroid of all active satellite positions.
+  //   3. Otherwise: null → button disabled.
+  let target: { lat: number; lng: number } | null = null;
+  if (selectedPassId !== null && passSample) {
+    target = { lat: passSample.lat, lng: passSample.lng };
+  } else {
+    const livePoints = activeNorads
+      .map((nid) => positions.get(nid))
+      .filter((p): p is NonNullable<typeof p> => p !== undefined)
+      .map((s) => ({ lat: s.lat, lng: s.lng }));
+    target = sphericalCentroid(livePoints);
+  }
+  const disabled = target === null;
 
   const handleClick = () => {
-    if (!centroid) return;
+    if (!target) return;
+    // Deselect the pass first (if any). useLivePolling's effect will
+    // re-fire on the next render, kicking off live polling. The reframe
+    // below tweens the camera toward the current pass-marker location;
+    // by the time the first live poll lands (within ~1s), the live
+    // marker should appear roughly where the camera ended up.
     if (selectedPassId !== null) select(null);
-    reframeTo(centroid.lat, centroid.lng);
+    reframeTo(target.lat, target.lng);
   };
 
   return (
@@ -68,8 +96,10 @@ export function LocateButton() {
       onClick={handleClick}
       disabled={disabled}
       title={
-        centroid !== null
-          ? "Locate satellite"
+        target !== null
+          ? selectedPassId !== null
+            ? "Locate satellite (deselects current pass)"
+            : "Locate satellite"
           : activeNorads.length > 0
             ? "Waiting for live position…"
             : "Search a satellite first"
